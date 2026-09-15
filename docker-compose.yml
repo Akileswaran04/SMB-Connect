@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL (active) ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: technova-postgres
+    environment:
+      POSTGRES_USER: technova
+      POSTGRES_PASSWORD: technova
+      POSTGRES_DB: technova
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U technova"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── MongoDB (future — reserved) ──
+  # mongodb:
+  #   image: mongo:7
+  #   container_name: technova-mongodb
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongodb_data:/data/db
+
+  # ── Redis (future — reserved) ──
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: technova-redis
+  #   ports:
+  #     - "6379:6379"
+
+  # ── Backend API ──
+  # api:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     DATABASE_URL: postgresql+asyncpg://technova:technova@postgres:5432/technova
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # ── Frontend ──
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     - api
+
+volumes:
+  postgres_data:
+  # mongodb_data:
