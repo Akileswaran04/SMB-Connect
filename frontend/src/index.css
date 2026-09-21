@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── MD3 type scale (used as text-headline-lg, text-label-sm, …) ── */
+  --text-display-lg: 3rem;
+  --text-display-lg--line-height: 3.5rem;
+  --text-display-lg--font-weight: 700;
+  --text-headline-xl: 2.25rem;
+  --text-headline-xl--line-height: 2.75rem;
+  --text-headline-lg: 1.75rem;
+  --text-headline-lg--line-height: 2.25rem;
+  --text-headline-md: 1.5rem;
+  --text-headline-md--line-height: 2rem;
+  --text-headline-sm: 1.25rem;
+  --text-headline-sm--line-height: 1.75rem;
+  --text-title-lg: 1.125rem;
+  --text-title-lg--line-height: 1.625rem;
+  --text-title-md: 1rem;
+  --text-title-md--line-height: 1.5rem;
+  --text-title-sm: 0.9375rem;
+  --text-title-sm--line-height: 1.375rem;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5rem;
+  --text-body-md: 0.9375rem;
+  --text-body-md--line-height: 1.375rem;
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-label-md: 0.875rem;
+  --text-label-md--line-height: 1.25rem;
+  --text-label-sm: 0.75rem;
+  --text-label-sm--line-height: 1rem;
+
+  /* Page content width (max-w-max-width) */
+  --container-max-width: 80rem;
+
+  /* ── MD3 Color Tokens from DESIGN.md ── */
+  --color-primary: #00685f;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #008378;
+  --color-on-primary-container: #f4fffc;
+  --color-primary-fixed: #89f5e7;
+  --color-primary-fixed-dim: #6bd8cb;
+  --color-on-primary-fixed: #00201d;
+  --color-on-primary-fixed-variant: #005049;
+  --color-inverse-primary: #6bd8cb;
+
+  --color-secondary: #575e70;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d9dff5;
+  --color-on-secondary-container: #5c6274;
+  --color-secondary-fixed: #dce2f7;
+  --color-secondary-fixed-dim: #c0c6db;
+  --color-on-secondary-fixed: #141b2b;
+  --color-on-secondary-fixed-variant: #404758;
+
+  --color-tertiary: #5a5c5d;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #737576;
+  --color-on-tertiary-container: #fcfdfe;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-surface: #f9f9ff;
+  --color-on-surface: #151c27;
+  --color-on-surface-variant: #3d4947;
+  --color-surface-bright: #f9f9ff;
+  --color-surface-dim: #d3daea;
+  --color-surface-variant: #dce2f3;
+  --color-surface-container: #e7eefe;
+  --color-surface-container-low: #f0f3ff;
+  --color-surface-container-high: #e2e8f8;
+  --color-surface-container-highest: #dce2f3;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-tint: #006a61;
+
+  --color-background: #f9f9ff;
+  --color-on-background: #151c27;
+
+  --color-inverse-surface: #2a313d;
+  --color-inverse-on-surface: #ebf1ff;
+
+  --color-outline: #6d7a77;
+  --color-outline-variant: #bcc9c6;
+}
+
+/* ── Base styles ── */
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-on-background);
+  line-height: 1.5;
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent iOS zoom on input focus (inputs only — buttons keep their text size) */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Material Symbols config */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ── Interaction utilities ── */
+.hover-ambient:hover {
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+  transition: all 0.2s ease-in-out;
+}
+
+.active-scale:active {
+  transform: scale(0.98);
+}
+
+/* ── Scrollbar ── */
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 3px;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Drawer slide-in ── */
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slideIn 0.25s ease-out;
+}
+
+/* ── Toast animation ── */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(1rem) translateX(-50%); }
+  to { opacity: 1; transform: translateY(0) translateX(-50%); }
+}
+.toast-enter {
+  animation: slideUpFade 0.3s ease-out forwards;
+}
