@@ -327,7 +327,7 @@ async def _seed_conversation(convo_repo, msg_repo, seller_profile_id, buyer_prof
         await msgs_coll.delete_many({"conversationId": convo["_id"]})
         await convos_coll.update_one(
             {"_id": ObjectId(convo["_id"])},
-            {"$set": {"unreadCount": 0, "unreadFor": None, "lastMessage": None, "lastMessageAt": None}},
+            {"$set": {"unreadSeller": 0, "unreadBuyer": 0, "lastMessage": None, "lastMessageAt": None}},
         )
 
         base_time = utcnow() - timedelta(hours=len(thread))
@@ -350,8 +350,7 @@ async def _seed_conversation(convo_repo, msg_repo, seller_profile_id, buyer_prof
                 "isAiGenerated": False,
             }
             await msg_repo.create(doc)
-            recipient = seller_profile_id if sender_type == "buyer" else buyer_profile_id
-            await convo_repo.update_last_message(str(convo["_id"]), content, recipient)
+            await convo_repo.update_last_message(str(convo["_id"]), content)
 
     unread = await msgs_coll.count_documents({
         "conversationId": convo["_id"],
@@ -360,7 +359,7 @@ async def _seed_conversation(convo_repo, msg_repo, seller_profile_id, buyer_prof
     })
     await convos_coll.update_one(
         {"_id": ObjectId(convo["_id"])},
-        {"$set": {"unreadCount": unread, "unreadFor": seller_profile_id}},
+        {"$set": {"unreadSeller": unread, "unreadBuyer": 0}, "$unset": {"unreadCount": "", "unreadFor": ""}},
     )
     return convo
 

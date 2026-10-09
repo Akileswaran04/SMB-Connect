@@ -61,6 +61,9 @@ class HumanApprovalService:
             raise ValidationException("No messages to draft a reply to")
 
         original = last.get("content", "")
+        # Only one live draft per conversation: a rewrite or a newer buyer
+        # message retires the older pending ones.
+        await self.draft_repo.supersede_pending(conversation_id)
         analysis = await analyze_message(original, llm_draft=True)
 
         draft = await self.draft_repo.create({
@@ -100,6 +103,8 @@ class HumanApprovalService:
         if not draft:
             raise NotFoundException("Draft", draft_id)
         await self._assert_owner(user_id, draft)
+        if draft.get("status") in ("sent", "superseded"):
+            raise ValidationException(f"This draft is already {draft['status']}")
         updated = await self.draft_repo.update_status(draft_id, status)
         return self._to_response(updated)
 
@@ -108,8 +113,8 @@ class HumanApprovalService:
         if not draft:
             raise NotFoundException("Draft", draft_id)
         await self._assert_owner(user_id, draft)
-        if draft.get("status") in ("rejected",):
-            raise ValidationException("Rejected drafts cannot be sent")
+        if draft.get("status") in ("rejected", "superseded"):
+            raise ValidationException(f"{draft['status'].capitalize()} drafts cannot be sent")
         if draft.get("status") == "sent":
             raise ValidationException("Draft already sent")
 
@@ -125,6 +130,7 @@ class HumanApprovalService:
                 source="in_app",
                 client_message_id=f"draft:{draft_id}",
             ),
+            ai_generated=True,
         )
         await self.draft_repo.mark_sent(draft_id)
         return {"draft": self._to_response(draft), "message": message}

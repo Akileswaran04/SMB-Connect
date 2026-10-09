@@ -114,6 +114,9 @@ async def get_me(
             "bank_account_last4": profile.bank_account_last4,
             "bank_ifsc": profile.bank_ifsc,
             "upi_id": profile.upi_id,
+            "avatar_image": profile.avatar_image,
+            "cover_image": profile.cover_image,
+            "documents": profile.documents or [],
             "created_at": profile.created_at.isoformat() if profile.created_at else None,
         } if profile else None
     elif role == "logistics":

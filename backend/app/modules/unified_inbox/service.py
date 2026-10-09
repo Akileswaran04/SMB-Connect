@@ -8,8 +8,10 @@ from sqlalchemy.orm import joinedload
 from app.infrastructure.redis.realtime import RealtimeService
 from app.infrastructure.mongodb.chat import get_conversations_collection, utcnow
 from app.infrastructure.postgres.database import AsyncSessionLocal
+from pymongo.errors import DuplicateKeyError
+
 from app.modules.unified_inbox.repository import (
-    ConversationRepository, MessageRepository, serialize,
+    ConversationRepository, MessageRepository, serialize, unread_field,
 )
 from app.modules.seller_profile.models import SellerProfile
 from app.modules.buyer_profile.models import BuyerProfile
@@ -100,7 +102,7 @@ class InboxService:
         convos = await get_conversations_collection()
         pipeline = [
             {"$match": {field: participant_id}},
-            {"$group": {"_id": None, "total": {"$sum": "$unreadCount"}}},
+            {"$group": {"_id": None, "total": {"$sum": f"${unread_field(user_role)}"}}},
         ]
         results = await convos.aggregate(pipeline).to_list(length=1)
         return results[0]["total"] if results else 0
@@ -128,7 +130,7 @@ class InboxService:
             buyer_id = data.buyer_id
 
         convo = await self.convo_repo.get_or_create(seller_id, buyer_id)
-        return await self._to_response(convo)
+        return await self._to_response(convo, user_role)
 
     async def list_conversations(
         self, user_id: int, user_role: str, cursor: Optional[str] = None, limit: int = 50
@@ -140,7 +142,7 @@ class InboxService:
         names = await self._buyer_names([c.get("buyerId") for c in docs])
         items = []
         for convo in docs:
-            item = await self._to_response(convo)
+            item = await self._to_response(convo, user_role)
             if user_role == "seller":
                 item["customer_name"] = names.get(convo.get("buyerId"))
             items.append(item)
@@ -155,13 +157,13 @@ class InboxService:
         if not convo:
             raise NotFoundException("Conversation", conversation_id)
         await self._assert_participant(user_id, user_role, convo)
-        response = await self._to_response(convo)
+        response = await self._to_response(convo, user_role)
         if user_role == "seller":
             names = await self._buyer_names([convo.get("buyerId")])
             response["customer_name"] = names.get(convo.get("buyerId"))
         return response
 
-    async def _to_response(self, convo: dict) -> dict:
+    async def _to_response(self, convo: dict, viewer_role: str) -> dict:
         serialized = serialize(convo)
         return {
             "id": serialized["id"],
@@ -170,7 +172,7 @@ class InboxService:
             "customer_name": None,
             "last_message": convo.get("lastMessage"),
             "last_message_at": convo.get("lastMessageAt"),
-            "unread_count": convo.get("unreadCount", 0),
+            "unread_count": convo.get(unread_field(viewer_role), 0),
             "status": convo.get("status", "active"),
             "created_at": convo.get("createdAt"),
         }
@@ -205,7 +207,10 @@ class InboxService:
         user_id: int,
         user_role: str,
         data: MessageCreate,
+        ai_generated: bool = False,
     ) -> dict:
+        """`ai_generated` is set only server-side (an approved AI draft), never
+        from client input."""
         convo = await self.convo_repo.get_by_id(conversation_id)
         if not convo:
             raise NotFoundException("Conversation", conversation_id)
@@ -218,8 +223,6 @@ class InboxService:
             if existing:
                 return self._msg_response(existing)
 
-        sequence = await self.msg_repo.next_sequence(conversation_id)
-
         doc = {
             "conversationId": convo["_id"],
             "senderId": participant_id,
@@ -231,18 +234,32 @@ class InboxService:
             "sentiment": None,
             "translatedContent": None,
             "translatedLanguage": None,
-            "sequenceNumber": sequence,
             "attachments": data.attachments,
             "createdAt": utcnow(),
             "readAt": None,
-            "isAiGenerated": False,
+            "isAiGenerated": ai_generated,
         }
         if data.client_message_id:
             doc["clientMessageId"] = data.client_message_id
-        saved = await self.msg_repo.create(doc)
+        # Sequence is max+1, so two concurrent sends can pick the same number;
+        # the unique index rejects the loser and it retries with the next one.
+        for attempt in range(5):
+            doc["sequenceNumber"] = await self.msg_repo.next_sequence(conversation_id)
+            doc.pop("_id", None)
+            try:
+                saved = await self.msg_repo.create(doc)
+                break
+            except DuplicateKeyError:
+                if data.client_message_id:
+                    existing = await self.msg_repo.find_by_client_message_id(data.client_message_id)
+                    if existing:
+                        return self._msg_response(existing)
+                if attempt == 4:
+                    raise
 
-        await self.convo_repo.update_last_message(conversation_id, data.content, recipient_id)
-        await self.convo_repo.increment_unread(conversation_id, recipient_id)
+        recipient_role = "buyer" if user_role == "seller" else "seller"
+        await self.convo_repo.update_last_message(conversation_id, data.content)
+        await self.convo_repo.increment_unread(conversation_id, recipient_role)
 
         payload = {"message": self._msg_response(saved)}
         await RealtimeService.publish(conversation_id, "message:new", payload)
@@ -251,7 +268,6 @@ class InboxService:
         )
 
         _spawn(self._enrich_sentiment(conversation_id, saved["_id"], data.content))
-        recipient_role = "buyer" if user_role == "seller" else "seller"
         _spawn(self._enrich_translation(
             conversation_id, saved["_id"], data.content,
             participant_id, user_role, recipient_id, recipient_role,
@@ -328,5 +344,5 @@ class InboxService:
             raise NotFoundException("Conversation", conversation_id)
         await self._assert_participant(user_id, user_role, convo)
         participant_id = await self._resolve_participant(user_id, user_role)
-        await self.convo_repo.mark_read(conversation_id, participant_id)
+        await self.convo_repo.mark_read(conversation_id, participant_id, user_role)
         return {"conversation_id": conversation_id, "unread_count": 0}

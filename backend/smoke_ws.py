@@ -54,8 +54,9 @@ async def ws_flow():
                         headers={"Authorization": f"Bearer {seller_token}"}).json()
     conversation_id = convo["id"]
 
-    async with websockets.connect(f"{WS}?token={buyer_token}") as buyer_ws, \
-               websockets.connect(f"{WS}?token={seller_token}") as seller_ws:
+    async with websockets.connect(WS) as buyer_ws, websockets.connect(WS) as seller_ws:
+        await buyer_ws.send(json.dumps({"type": "auth", "token": buyer_token}))
+        await seller_ws.send(json.dumps({"type": "auth", "token": seller_token}))
 
         await buyer_ws.send(json.dumps({"type": "join", "conversation_id": conversation_id}))
         await seller_ws.send(json.dumps({"type": "join", "conversation_id": conversation_id}))

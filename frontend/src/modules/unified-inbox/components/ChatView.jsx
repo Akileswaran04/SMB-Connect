@@ -128,45 +128,24 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
     }
   }, [handleSendRaw, onRefresh, onToast]);
 
-  const handleAcceptDraft = useCallback(async (text) => {
-    if (!aiDraft?.id) {
-
-      await handleSendRaw(text);
-      setAiDraft(null);
-      onToast?.('AI response sent');
-      return;
-    }
+  // Drafts only go out through the approval endpoint, so every AI-written
+  // message is recorded as approved. On failure the draft stays for a retry.
+  const approveDraft = useCallback(async (editedText) => {
+    if (!aiDraft?.id) return;
     try {
+      if (editedText !== undefined) await editDraft(aiDraft.id, editedText);
       await sendDraft(aiDraft.id);
-      onToast?.('AI response approved and sent');
-    } catch (err) {
-      await handleSendRaw(text);
-      onToast?.('Sent (draft approval failed, sent as-is)');
-    }
-    setAiDraft(null);
-    await reload();
-    onRefresh?.();
-  }, [aiDraft, handleSendRaw, reload, onRefresh, onToast]);
-
-  const handleEditDraft = useCallback(async (editedText) => {
-    if (!aiDraft?.id) {
-      await handleSendRaw(editedText);
+      onToast?.(editedText !== undefined ? 'Edited response approved and sent' : 'AI response approved and sent');
       setAiDraft(null);
-      onToast?.('Edited response sent');
-      return;
-    }
-    try {
-      await editDraft(aiDraft.id, editedText);
-      await sendDraft(aiDraft.id);
-      onToast?.('Edited response approved and sent');
+      await reload();
+      onRefresh?.();
     } catch (err) {
-      await handleSendRaw(editedText);
-      onToast?.('Sent (draft approval failed, sent as-is)');
+      onToast?.(err.message || 'Could not send the draft — try again', 'error');
     }
-    setAiDraft(null);
-    await reload();
-    onRefresh?.();
-  }, [aiDraft, handleSendRaw, reload, onRefresh, onToast]);
+  }, [aiDraft, reload, onRefresh, onToast]);
+
+  const handleAcceptDraft = useCallback(() => approveDraft(), [approveDraft]);
+  const handleEditDraft = useCallback((editedText) => approveDraft(editedText), [approveDraft]);
 
   const handleRewriteDraft = useCallback(async () => {
     if (!aiDraft?.id) return;

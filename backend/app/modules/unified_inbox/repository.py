@@ -14,6 +14,12 @@ def to_str_id(doc) -> Optional[str]:
     return str(doc["_id"]) if doc else None
 
 
+def unread_field(role: str) -> str:
+    """Each side has its own unread counter, so a sender never sees their own
+    messages as unread and reading only clears the reader's side."""
+    return "unreadSeller" if role == "seller" else "unreadBuyer"
+
+
 def serialize(doc) -> dict:
     if not doc:
         return None
@@ -47,7 +53,8 @@ class ConversationRepository:
             "status": "active",
             "lastMessage": None,
             "lastMessageAt": None,
-            "unreadCount": 0,
+            "unreadSeller": 0,
+            "unreadBuyer": 0,
             "createdAt": now,
             "updatedAt": now,
         }
@@ -84,9 +91,7 @@ class ConversationRepository:
         next_cursor = str(docs[-1]["_id"]) if has_more and docs else None
         return docs, next_cursor
 
-    async def update_last_message(
-        self, conversation_id: str, content: str, recipient_id: int
-    ) -> None:
+    async def update_last_message(self, conversation_id: str, content: str) -> None:
         convos = await get_conversations_collection()
         await convos.update_one(
             {"_id": ObjectId(conversation_id)},
@@ -95,22 +100,18 @@ class ConversationRepository:
                     "lastMessage": content,
                     "lastMessageAt": utcnow(),
                     "updatedAt": utcnow(),
-                    "unreadFor": recipient_id,
                 },
             },
         )
 
-    async def increment_unread(self, conversation_id: str, recipient_id: int) -> None:
+    async def increment_unread(self, conversation_id: str, recipient_role: str) -> None:
         convos = await get_conversations_collection()
         await convos.update_one(
             {"_id": ObjectId(conversation_id)},
-            {
-                "$inc": {"unreadCount": 1},
-                "$set": {"unreadFor": recipient_id, "updatedAt": utcnow()},
-            },
+            {"$inc": {unread_field(recipient_role): 1}, "$set": {"updatedAt": utcnow()}},
         )
 
-    async def mark_read(self, conversation_id: str, reader_id: int) -> None:
+    async def mark_read(self, conversation_id: str, reader_id: int, reader_role: str) -> None:
         convos = await get_conversations_collection()
         messages = await get_messages_collection()
 
@@ -124,7 +125,7 @@ class ConversationRepository:
         )
         await convos.update_one(
             {"_id": ObjectId(conversation_id)},
-            {"$set": {"unreadCount": 0, "unreadFor": reader_id, "updatedAt": utcnow()}},
+            {"$set": {unread_field(reader_role): 0, "updatedAt": utcnow()}},
         )
 
 
@@ -184,13 +185,6 @@ class MessageRepository:
         docs.reverse()
         next_cursor = str(docs[0]["_id"]) if has_more and docs else None
         return docs, next_cursor
-
-    async def mark_ai_generated(self, message_id: str) -> None:
-        messages = await get_messages_collection()
-        await messages.update_one(
-            {"_id": ObjectId(message_id)},
-            {"$set": {"isAiGenerated": True}},
-        )
 
     async def update_sentiment(self, message_id, sentiment: dict) -> None:
         messages = await get_messages_collection()

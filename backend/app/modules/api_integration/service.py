@@ -178,8 +178,8 @@ class IntegrationService:
                 "clientMessageId": client_message_id,
             }
             saved = await msg_repo.create(doc)
-            await convo_repo.update_last_message(str(convo["_id"]), content, seller_profile.id)
-            await convo_repo.increment_unread(str(convo["_id"]), seller_profile.id)
+            await convo_repo.update_last_message(str(convo["_id"]), content)
+            await convo_repo.increment_unread(str(convo["_id"]), "seller")
             message_ids.append(str(saved["_id"]))
             created += 1
 

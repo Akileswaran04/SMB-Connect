@@ -50,6 +50,13 @@ class DraftRepository:
         )
         return await self.get_by_id(draft_id)
 
+    async def supersede_pending(self, conversation_id: str) -> None:
+        drafts = await get_drafts_collection()
+        await drafts.update_many(
+            {"conversationId": ObjectId(conversation_id), "status": "pending"},
+            {"$set": {"status": "superseded", "reviewedAt": utcnow()}},
+        )
+
     async def mark_sent(self, draft_id: str) -> None:
         drafts = await get_drafts_collection()
         await drafts.update_one(

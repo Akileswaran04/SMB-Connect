@@ -73,9 +73,12 @@ export async function getMyLanguage() {
   }
 }
 
+// The UI reads avatarImage / coverImage; the API uses snake_case.
+const withSellerMedia = (s) => s && { ...s, avatarImage: s.avatar_image, coverImage: s.cover_image, documents: s.documents || [] };
+
 export async function getSellerById() {
   const data = await getCurrentUser();
-  return data?.seller || null;
+  return withSellerMedia(data?.seller) || null;
 }
 
 export async function updateSeller(id, updates) {
@@ -86,13 +89,15 @@ export async function updateSeller(id, updates) {
     phone: 'phone',
     email: 'email',
     address: 'address_line_1',
+    avatarImage: 'avatar_image',
+    coverImage: 'cover_image',
   };
   const payload = {};
   for (const [key, value] of Object.entries(updates)) {
     const backendKey = fieldMap[key] || key;
     if (value !== undefined) payload[backendKey] = value;
   }
-  return await api.put('/sellers/profile', payload);
+  return withSellerMedia(await api.put('/sellers/profile', payload));
 }
 
 export async function getBuyerById() {

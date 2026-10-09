@@ -76,6 +76,12 @@ class SellerProfile(Base):
     bank_ifsc = Column(String(20), nullable=True)
     upi_id = Column(String(100), nullable=True)
 
+    # Store images and verification documents as data URLs, like product
+    # images (object storage is not wired up yet). Size limits live in schemas.
+    avatar_image = Column(Text, nullable=True)
+    cover_image = Column(Text, nullable=True)
+    documents = Column(JSONB, nullable=True)  # [{"id", "name", "dataUrl", "uploadedAt", "status"}]
+
     created_at = Column(DateTime(), nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime(), nullable=False, default=datetime.utcnow)
 

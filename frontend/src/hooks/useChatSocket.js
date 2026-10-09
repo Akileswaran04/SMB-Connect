@@ -14,10 +14,12 @@ export default function useChatSocket() {
     if (!token) return;
     setStatus('connecting');
 
-    const ws = new WebSocket(`${WS_BASE}?token=${token}`);
+    // The token goes in the first frame, not the URL (URLs end up in logs).
+    const ws = new WebSocket(WS_BASE);
     socketRef.current = ws;
 
     ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'auth', token }));
       setStatus('open');
 
       for (const conversationId of joinedConversationsRef.current) {

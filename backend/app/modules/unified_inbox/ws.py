@@ -32,7 +32,6 @@ class ConnectionManager:
         self.conversation_channels: dict[str, set[str]] = {}
 
     async def connect(self, connection_id: str, user_id: int, ws: WebSocket) -> None:
-        await ws.accept()
         self.connections[connection_id] = ws
         self.user_connections.setdefault(user_id, set()).add(connection_id)
         await RealtimeService.set_online(user_id, connection_id)
@@ -166,9 +165,25 @@ async def _join(ws: WebSocket, connection_id: str, user, payload: dict, db) -> N
     await ws.send_text(_dumps({"event": "joined", "conversation_id": conversation_id}))
 
 
+AUTH_TIMEOUT_SECONDS = 10
+
+
+async def _authenticate(ws: WebSocket):
+    """The JWT arrives as the first frame, {"type": "auth", "token": ...},
+    not in the URL — query strings end up in server and proxy logs."""
+    try:
+        frame = json.loads(await asyncio.wait_for(ws.receive_text(), timeout=AUTH_TIMEOUT_SECONDS))
+    except (asyncio.TimeoutError, json.JSONDecodeError, WebSocketDisconnect):
+        return None
+    if not isinstance(frame, dict) or frame.get("type") != "auth" or not isinstance(frame.get("token"), str):
+        return None
+    return await _resolve_user(frame["token"])
+
+
 @router.websocket("/ws/chat")
-async def chat_websocket(ws: WebSocket, token: str = ""):
-    user = await _resolve_user(token)
+async def chat_websocket(ws: WebSocket):
+    await ws.accept()
+    user = await _authenticate(ws)
     if user is None:
         await ws.close(code=4401)
         return
