@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Seed Demo Data</title>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #f9f9ff; margin: 0; }
+    .card { background: white; border-radius: 16px; padding: 40px; max-width: 440px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
+    h1 { color: #151c27; font-size: 24px; margin-bottom: 8px; }
+    p { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #00685f; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:hover { background: #005049; }
+    .btn:active { transform: scale(0.98); }
+    .success { display: none; margin-top: 24px; padding: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; color: #166534; font-size: 14px; }
+    .success.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🏪 Seed Demo Data</h1>
+    <p>Click below to load 12 food supply products, 20 reviews, 8 customers, and 6 conversations into your browser.</p>
+    <button class="btn" onclick="seedData()">
+      <span>📦</span> Load Demo Data
+    </button>
+    <div class="success" id="success">
+      ✅ Demo data loaded!<br><br>
+      <a href="/" style="color:#00685f;font-weight:600;text-decoration:none;">→ Go to Dashboard</a><br>
+      <small style="color:#64748b;margin-top:8px;display:block;">freshbasket@foodsupply.in / fresh123</small>
+    </div>
+  </div>
+
+  <script>
+    function seedData() {
+      const id = 'seller_food001';
+      const seller = {
+        id, storeName: 'FreshBasket Food Supply', category: 'Food & Beverages',
+        bio: 'Your trusted wholesale food supplier since 2010. We source directly from farms and mills across India. Quality grains, spices, oils, and daily essentials at competitive wholesale prices. Serving 500+ retailers across Rajasthan.',
+        phone: '+91 98290 12345', email: 'freshbasket@foodsupply.in',
+        address: 'Godown No. 12, Foodgrain Market, Vidyadhar Nagar, Jaipur',
+        hours: 'Mon-Sat, 7 AM - 6 PM | Sunday: 8 AM - 2 PM',
+        avatarImage: null, coverImage: null,
+        documents: [
+          { id: 'doc1', name: 'GST_Certificate_FreshBasket.pdf', dataUrl: '', uploadedAt: '2026-06-15T10:00:00Z', status: 'verified' },
+          { id: 'doc2', name: 'FSSAI_License_2026.pdf', dataUrl: '', uploadedAt: '2026-07-01T12:00:00Z', status: 'verified' },
+          { id: 'doc3', name: 'Shop_License_Renewal.pdf', dataUrl: '', uploadedAt: '2026-08-10T09:00:00Z', status: 'pending' }
+        ],
+        password: 'fresh123', createdAt: '2024-01-15T00:00:00Z'
+      };
+
+      const products = [
+        { id:'f1', sellerId:id, name:'Basmati Rice (1121 Premium)', description:'Extra-long grain aged basmati. 5kg pack.', price:699, image:null, stock:180, lowStockThreshold:50, likes:87, reviews:[{id:'fr1',customerName:'Rajesh Traders',rating:5,comment:'Best quality basmati.',date:'2026-08-10T09:00:00Z',sellerReply:'Thank you!'},{id:'fr2',customerName:'Anita Provision Store',rating:5,comment:'Grains are extra long.',date:'2026-08-15T14:30:00Z',sellerReply:null},{id:'fr3',customerName:'Vikram General Store',rating:4,comment:'Good quality.',date:'2026-08-20T11:00:00Z',sellerReply:'Noted!'}], createdAt:'2026-01-10' },
+        { id:'f2', sellerId:id, name:'Toor Dal (Unpolished)', description:'Premium unpolished toor dal. 15kg bag.', price:2150, image:null, stock:95, lowStockThreshold:30, likes:64, reviews:[{id:'fr4',customerName:'Meena Traders',rating:5,comment:'Purity is excellent.',date:'2026-08-12T10:00:00Z',sellerReply:'Triple-cleaned!'},{id:'fr5',customerName:'Sharma & Sons Grocery',rating:4,comment:'Good dal.',date:'2026-08-18T16:00:00Z',sellerReply:'Volume discounts available.'}], createdAt:'2026-02-05' },
+        { id:'f3', sellerId:id, name:'Cold-Pressed Mustard Oil', description:'Kachi ghani. 15 litre tin.', price:1890, image:null, stock:0, lowStockThreshold:20, likes:112, reviews:[{id:'fr6',customerName:'Goyal Kirana Store',rating:5,comment:'Best mustard oil.',date:'2026-08-08T08:30:00Z',sellerReply:'Cold-pressed.'},{id:'fr7',customerName:'Priya Departmental Store',rating:5,comment:'Aroma is incredible.',date:'2026-08-14T12:00:00Z',sellerReply:null},{id:'fr8',customerName:'Rajesh Traders',rating:4,comment:'Excellent product.',date:'2026-08-22T15:00:00Z',sellerReply:'Adding second vehicle.'}], createdAt:'2026-01-20' },
+        { id:'f4', sellerId:id, name:'Organic Turmeric Powder', description:'High-curcumin from Erode. 500g.', price:245, image:null, stock:320, lowStockThreshold:80, likes:56, reviews:[{id:'fr9',customerName:'Anita Provision Store',rating:5,comment:'Deep yellow color.',date:'2026-08-16T09:00:00Z',sellerReply:'Lab-tested.'},{id:'fr10',customerName:'Meena Traders',rating:5,comment:'Retail-ready packaging.',date:'2026-08-24T11:30:00Z',sellerReply:null}], createdAt:'2026-03-01' },
+        { id:'f5', sellerId:id, name:'Whole Wheat Atta', description:'Chakki fresh. 10kg bag.', price:480, image:null, stock:250, lowStockThreshold:60, likes:93, reviews:[{id:'fr11',customerName:'Sharma & Sons Grocery',rating:5,comment:'Rotis are soft.',date:'2026-08-05T10:00:00Z',sellerReply:'Max nutrition.'},{id:'fr12',customerName:'Vikram General Store',rating:4,comment:'Good quality.',date:'2026-08-19T14:00:00Z',sellerReply:'5kg packs now available!'}], createdAt:'2026-02-15' },
+        { id:'f6', sellerId:id, name:'Red Chilli Powder (Kashmiri)', description:'Deep colour, moderate heat. 1kg.', price:520, image:null, stock:42, lowStockThreshold:25, likes:41, reviews:[{id:'fr13',customerName:'Goyal Kirana Store',rating:5,comment:'Perfect colour.',date:'2026-08-11T13:00:00Z',sellerReply:'No excessive heat.'},{id:'fr14',customerName:'Anita Provision Store',rating:3,comment:'Slightly less pungent.',date:'2026-08-25T09:30:00Z',sellerReply:'Will ensure consistency.'}], createdAt:'2026-04-10' },
+        { id:'f7', sellerId:id, name:'Refined Sunflower Oil', description:'Fortified. 15 litre tin.', price:1650, image:null, stock:120, lowStockThreshold:30, likes:78, reviews:[{id:'fr15',customerName:'Priya Departmental Store',rating:5,comment:'Always fresh.',date:'2026-08-13T11:00:00Z',sellerReply:'FIFO management.'},{id:'fr16',customerName:'Rajesh Traders',rating:4,comment:'Delivery late last time.',date:'2026-08-21T16:30:00Z',sellerReply:'Route optimization added.'}], createdAt:'2026-03-20' },
+        { id:'f8', sellerId:id, name:'Sugar (Refined)', description:'ICUMSA 45. 50kg bag.', price:3200, image:null, stock:85, lowStockThreshold:20, likes:35, reviews:[], createdAt:'2026-05-01' },
+        { id:'f9', sellerId:id, name:'Chana Dal (Desi)', description:'For snacks and cooking. 15kg.', price:1800, image:null, stock:60, lowStockThreshold:20, likes:29, reviews:[{id:'fr17',customerName:'Meena Traders',rating:4,comment:'Good for besan.',date:'2026-08-17T10:30:00Z',sellerReply:'Better taste.'}], createdAt:'2026-04-15' },
+        { id:'f10', sellerId:id, name:'Table Salt (Iodised)', description:'Double-iodised. 25kg bag.', price:420, image:null, stock:5, lowStockThreshold:15, likes:18, reviews:[], createdAt:'2026-06-01' },
+        { id:'f11', sellerId:id, name:'Ghee (A2 Desi Cow)', description:'Bilona ghee. 1 litre jar.', price:899, image:null, stock:35, lowStockThreshold:10, likes:67, reviews:[{id:'fr18',customerName:'Priya Departmental Store',rating:5,comment:'Aroma is divine.',date:'2026-08-23T08:00:00Z',sellerReply:'Traditional method.'},{id:'fr19',customerName:'Sharma & Sons Grocery',rating:5,comment:'Sells like hotcakes.',date:'2026-08-26T14:00:00Z',sellerReply:null}], createdAt:'2026-05-10' },
+        { id:'f12', sellerId:id, name:'Moong Dal (Split)', description:'Easy to cook. 15kg bag.', price:2400, image:null, stock:70, lowStockThreshold:25, likes:44, reviews:[{id:'fr20',customerName:'Goyal Kirana Store',rating:4,comment:'Consistent quality.',date:'2026-08-09T12:00:00Z',sellerReply:'Quality priority.'}], createdAt:'2026-03-10' }
+      ];
+
+      const customers = [
+        {id:'cu1',sellerId:id,name:'Rajesh Traders',contact:'+91 98280 55555',notes:'Largest retailer. Weekly orders.',lastInteraction:'2026-08-22T15:00:00Z'},
+        {id:'cu2',sellerId:id,name:'Anita Provision Store',contact:'+91 99281 66666',notes:'Medium retailer. Bi-weekly.',lastInteraction:'2026-08-25T09:30:00Z'},
+        {id:'cu3',sellerId:id,name:'Vikram General Store',contact:'+91 98290 77777',notes:'Small shop. Monthly orders.',lastInteraction:'2026-08-20T11:00:00Z'},
+        {id:'cu4',sellerId:id,name:'Meena Traders',contact:'+91 97990 88888',notes:'Wholesale distributor.',lastInteraction:'2026-08-24T11:30:00Z'},
+        {id:'cu5',sellerId:id,name:'Goyal Kirana Store',contact:'+91 98290 99999',notes:'Premium segment.',lastInteraction:'2026-08-26T14:00:00Z'},
+        {id:'cu6',sellerId:id,name:'Sharma & Sons Grocery',contact:'sharma.sons@email.com',notes:'Old customer since 2012.',lastInteraction:'2026-08-26T14:00:00Z'},
+        {id:'cu7',sellerId:id,name:'Priya Departmental Store',contact:'+91 97991 11111',notes:'New, growing fast.',lastInteraction:'2026-08-26T14:00:00Z'},
+        {id:'cu8',sellerId:id,name:'Sunrise Hotels & Catering',contact:'+91 98290 22222',notes:'Bulk buyer. Pay via cheque.',lastInteraction:'2026-08-15T10:00:00Z'}
+      ];
+
+      const conversations = [
+        { id:'conv1',sellerId:id,customerId:'cu1',customerName:'Rajesh Traders',lastMessage:'Can you send 50 bags of basmati rice by Friday?',lastMessageTime:'2026-08-27T14:30:00Z',unreadCount:2,orderTag:'ORD-2026-0892',messages:[{id:'m1',senderType:'customer',text:'Hello, I need to place a bulk order for Diwali season.',timestamp:'2026-08-25T09:00:00Z'},{id:'m2',senderType:'seller',text:'Namaste Rajesh ji! Sure, what do you need?',timestamp:'2026-08-25T09:05:00Z'},{id:'m3',senderType:'customer',text:'50 bags Basmati Rice 1121 Premium, 20 tins mustard oil, 30 bags toor dal.',timestamp:'2026-08-25T09:10:00Z'},{id:'m4',senderType:'seller',text:'Great! Total: 1,37,250 before discount.',timestamp:'2026-08-25T09:15:00Z',order:{id:'ORD-2026-0892',items:[{name:'Basmati Rice 1121',qty:50,total:34950},{name:'Mustard Oil 15L',qty:20,total:37800},{name:'Toor Dal 15kg',qty:30,total:64500}],total:137250,status:'confirmed'}},{id:'m5',senderType:'customer',text:'Can you give 5% discount for this volume?',timestamp:'2026-08-25T09:20:00Z'},{id:'m6',senderType:'seller',text:'For this order size, 4% discount. Final: 1,31,760.',timestamp:'2026-08-25T09:25:00Z'},{id:'m7',senderType:'customer',text:'Deal! When can you deliver?',timestamp:'2026-08-25T09:30:00Z'},{id:'m8',senderType:'seller',text:'Dispatch by Wednesday. Should reach Thursday evening.',timestamp:'2026-08-25T09:35:00Z'},{id:'m9',senderType:'customer',text:'Can you send 50 bags of basmati rice by Friday?',timestamp:'2026-08-27T14:30:00Z'}] },
+        { id:'conv2',sellerId:id,customerId:'cu2',customerName:'Anita Provision Store',lastMessage:'The turmeric powder is excellent! Want to reorder.',lastMessageTime:'2026-08-27T11:00:00Z',unreadCount:1,orderTag:'ORD-2026-0895',messages:[{id:'m10',senderType:'customer',text:'Hi, I received the organic turmeric powder order.',timestamp:'2026-08-26T10:00:00Z'},{id:'m11',senderType:'seller',text:'Great! How is the quality?',timestamp:'2026-08-26T10:05:00Z'},{id:'m12',senderType:'customer',text:'The turmeric powder is excellent! Want to reorder.',timestamp:'2026-08-27T11:00:00Z',order:{id:'ORD-2026-0895',items:[{name:'Organic Turmeric 500g',qty:100,total:24500}],total:24500,status:'pending'}}] },
+        { id:'conv3',sellerId:id,customerId:'cu5',customerName:'Goyal Kirana Store',lastMessage:'Do you have A2 ghee in stock? Need 20 jars urgently.',lastMessageTime:'2026-08-27T08:30:00Z',unreadCount:1,orderTag:null,messages:[{id:'m13',senderType:'customer',text:'Do you have A2 ghee in stock? Need 20 jars urgently.',timestamp:'2026-08-27T08:30:00Z'}] },
+        { id:'conv4',sellerId:id,customerId:'cu4',customerName:'Meena Traders',lastMessage:'Payment of 45,000 transferred via NEFT.',lastMessageTime:'2026-08-26T16:00:00Z',unreadCount:0,orderTag:'ORD-2026-0888',messages:[{id:'m14',senderType:'customer',text:'Please send the invoice for last week order.',timestamp:'2026-08-26T14:00:00Z'},{id:'m15',senderType:'seller',text:'Invoice sent. Total: 71,750.',timestamp:'2026-08-26T14:10:00Z',order:{id:'ORD-2026-0888',items:[{name:'Toor Dal 15kg',qty:25,total:53750},{name:'Chana Dal 15kg',qty:10,total:18000}],total:71750,status:'delivered'}},{id:'m16',senderType:'customer',text:'Payment of 45,000 transferred via NEFT.',timestamp:'2026-08-26T16:00:00Z'},{id:'m17',senderType:'seller',text:'Received! Remaining: 26,750.',timestamp:'2026-08-26T16:05:00Z'}] },
+        { id:'conv5',sellerId:id,customerId:'cu7',customerName:'Priya Departmental Store',lastMessage:'Thank you for the quick delivery!',lastMessageTime:'2026-08-25T18:00:00Z',unreadCount:0,orderTag:null,messages:[{id:'m18',senderType:'seller',text:'Hi Priya! Your sunflower oil order dispatched.',timestamp:'2026-08-25T10:00:00Z'},{id:'m19',senderType:'customer',text:'Great, when will it arrive?',timestamp:'2026-08-25T10:15:00Z'},{id:'m20',senderType:'seller',text:'Expected tomorrow morning.',timestamp:'2026-08-25T10:20:00Z'},{id:'m21',senderType:'customer',text:'Thank you for the quick delivery!',timestamp:'2026-08-25T18:00:00Z'}] },
+        { id:'conv6',sellerId:id,customerId:'cu8',customerName:'Sunrise Hotels & Catering',lastMessage:'Need rice and oil for the wedding banquet next week.',lastMessageTime:'2026-08-24T09:00:00Z',unreadCount:0,orderTag:null,messages:[{id:'m22',senderType:'customer',text:'Need rice and oil for wedding banquet. 200 people.',timestamp:'2026-08-24T09:00:00Z'},{id:'m23',senderType:'seller',text:'For 200 people: 25 bags rice, 5 tins oil, 5 bags sugar.',timestamp:'2026-08-24T09:10:00Z'},{id:'m24',senderType:'customer',text:'Yes please. Also need 2 bags table salt.',timestamp:'2026-08-24T09:15:00Z'}] }
+      ];
+
+      localStorage.setItem('msme_sellers', JSON.stringify([seller]));
+      localStorage.setItem('msme_products', JSON.stringify(products));
+      localStorage.setItem('msme_customers', JSON.stringify(customers));
+      localStorage.setItem('msme_conversations', JSON.stringify(conversations));
+      localStorage.setItem('msme_session', JSON.stringify({ loggedInSellerId: id }));
+
+      document.getElementById('success').classList.add('show');
+    }
+  </script>
+</body>
+</html>
