@@ -1,3 +1,3 @@
-from .cache import RedisClient, RedisSettings, get_redis
+from .cache import RedisClient, get_redis
 
-__all__ = ["RedisClient", "RedisSettings", "get_redis"]
+__all__ = ["RedisClient", "get_redis"]

@@ -19,21 +19,14 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── MongoDB (future — reserved) ──
-  # mongodb:
-  #   image: mongo:7
-  #   container_name: technova-mongodb
-  #   ports:
-  #     - "27017:27017"
-  #   volumes:
-  #     - mongodb_data:/data/db
-
-  # ── Redis (future — reserved) ──
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: technova-redis
-  #   ports:
-  #     - "6379:6379"
+  # ── MongoDB (active) ──
+  mongodb:
+    image: mongo:8
+    container_name: technova-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
 
   # ── Backend API ──
   # api:
@@ -60,4 +53,4 @@ services:
 
 volumes:
   postgres_data:
-  # mongodb_data:
+  mongodb_data:

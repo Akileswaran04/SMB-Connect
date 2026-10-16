@@ -22,8 +22,6 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "technova"
 
-    REDIS_URL: str = "redis://localhost:6379"
-
     SECRET_KEY: str = "change-me-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     ALGORITHM: str = "HS256"
@@ -52,7 +50,6 @@ class Settings(BaseSettings):
     MICROSOFT_CLIENT_SECRET: Optional[str] = None
     MICROSOFT_REDIRECT_URI: Optional[str] = None
 
-    STORAGE_BUCKET: str = "technova-storage"
 
     class Config:
         env_file = ".env"

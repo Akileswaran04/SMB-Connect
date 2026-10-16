@@ -15,7 +15,7 @@ RESET = '\033[0m'
 
 
 async def test_postgres_connection():
-    print(f"\n{BLUE}Testing PostgreSQL (Supabase)...{RESET}")
+    print(f"\n{BLUE}Testing PostgreSQL (local)...{RESET}")
     try:
         import asyncpg
         
@@ -24,7 +24,7 @@ async def test_postgres_connection():
             print(f"{RED}✗ DATABASE_URL not set{RESET}")
             return False
         
-        conn = await asyncpg.connect(url)
+        conn = await asyncpg.connect(url.replace('+asyncpg', ''))
         result = await conn.fetchval('SELECT 1')
         await conn.close()
         
@@ -43,7 +43,7 @@ async def test_postgres_connection():
 
 
 async def test_mongodb_connection():
-    print(f"\n{BLUE}Testing MongoDB (Atlas)...{RESET}")
+    print(f"\n{BLUE}Testing MongoDB (local)...{RESET}")
     try:
         from motor.motor_asyncio import AsyncIOMotorClient as AsyncClient
         
@@ -71,40 +71,6 @@ async def test_mongodb_connection():
         return False
 
 
-async def test_redis_connection():
-    print(f"\n{BLUE}Testing Redis...{RESET}")
-    try:
-        import redis.asyncio as redis
-        
-        url = os.getenv('REDIS_URL')
-        if not url:
-            print(f"{RED}✗ REDIS_URL not set{RESET}")
-            return False
-        
-        client = redis.from_url(url, decode_responses=True)
-        
-        pong = await client.ping()
-        
-        await client.set('test_key', 'test_value')
-        value = await client.get('test_key')
-        await client.delete('test_key')
-        
-        await client.close()
-        
-        if value == 'test_value':
-            print(f"{GREEN}✓ Redis connection successful{RESET}")
-            print(f"  Host: {os.getenv('REDIS_HOST')}")
-            print(f"  Port: {os.getenv('REDIS_PORT')}")
-            return True
-        else:
-            print(f"{RED}✗ Redis connection failed (set/get mismatch){RESET}")
-            return False
-            
-    except Exception as e:
-        print(f"{RED}✗ Redis connection error: {str(e)}{RESET}")
-        return False
-
-
 async def main():
     print(f"\n{BLUE}{'='*60}")
     print(f"TECHNOVA Database Connection Test")
@@ -118,8 +84,6 @@ async def main():
     results['PostgreSQL'] = await test_postgres_connection()
     
     results['MongoDB'] = await test_mongodb_connection()
-    
-    results['Redis'] = await test_redis_connection()
     
     print(f"\n{BLUE}{'='*60}")
     print(f"Connection Test Summary")

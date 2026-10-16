@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class MongoDBSettings(BaseSettings):
     model_config = ConfigDict(env_prefix="mongodb_", case_sensitive=False, env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    uri: str
+    uri: str = "mongodb://localhost:27017"
     db: str = "technova"
 
 

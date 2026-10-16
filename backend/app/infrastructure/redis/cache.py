@@ -3,23 +3,11 @@ import logging
 import time
 from typing import Any, Optional
 
-from pydantic import ConfigDict
-from pydantic_settings import BaseSettings
+from fakeredis import FakeAsyncRedis, FakeServer
 from redis.asyncio import Redis
 
 logger = logging.getLogger(__name__)
-
-
-class RedisSettings(BaseSettings):
-    model_config = ConfigDict(env_prefix="redis_", case_sensitive=False)
-
-    url: str = "redis://localhost:6379/0"
-    host: str = "localhost"
-    port: int = 6379
-    db: int = 0
-
-
-redis_settings = RedisSettings()
+_server = FakeServer()
 
 
 class RedisClient:
@@ -31,17 +19,12 @@ class RedisClient:
     async def connect_to_redis(cls) -> None:
         cls._last_connect_attempt = time.monotonic()
         try:
-            logger.info(f"Connecting to Redis at {redis_settings.host}:{redis_settings.port}...")
-            cls.client = await Redis.from_url(
-                redis_settings.url,
-                encoding="utf8",
-                decode_responses=True,
-                health_check_interval=30,
-                socket_connect_timeout=3,
-                socket_timeout=3,
-            )
+            # In-process Redis: no server to run, only Postgres and MongoDB are external.
+            # ponytail: state (OTP, rate limits, presence, pub/sub) is per-process and lost on
+            # restart; run a single uvicorn worker, swap in a real Redis to scale out.
+            cls.client = FakeAsyncRedis(server=_server, decode_responses=True)
             await cls.client.ping()
-            logger.info("Connected to Redis")
+            logger.info("In-process Redis ready")
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {str(e)}")
             cls.client = None

@@ -16,13 +16,9 @@ alembic==1.13.0
 motor==3.5.0
 pymongo==4.7.2
 
-# ── Redis ──
+# ── Redis (in-process via fakeredis) ──
 redis[hiredis]==5.1.0
-aioredis==2.0.1
-
-# ── Object Storage ──
-boto3==1.35.0
-botocore==1.35.0
+fakeredis>=2.26,<3  # in-process Redis, no server
 
 # ── Security ──
 python-jose[cryptography]==3.3.0

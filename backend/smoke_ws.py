@@ -100,6 +100,7 @@ async def admin_flow():
     from app.infrastructure.postgres.database import AsyncSessionLocal
     from app.modules.seller_profile.models import User  # noqa: F401
     from app.modules.buyer_profile.models import BuyerProfile  # noqa: F401 — registers relationship
+    import app.main  # noqa: F401 — registers every model for relationship lookups
     from app.core.security import hash_password
 
     async with AsyncSessionLocal() as db:
