@@ -3,7 +3,8 @@
  * buttons, cards, badges, tabs, modals, fields, stats and empty/loading states.
  */
 import { useEffect } from 'react';
-import { statusTone, titleCase } from '../utils/format';
+import { statusTone, statusText } from '../utils/format';
+import { t } from '../i18n';
 
 const TONES = {
   green: 'bg-emerald-100 text-emerald-800',
@@ -33,7 +34,7 @@ export function Badge({ tone = 'slate', children, className = '' }) {
 }
 
 export function StatusBadge({ status }) {
-  return <Badge tone={statusTone(status)}>{titleCase(status)}</Badge>;
+  return <Badge tone={statusTone(status)}>{statusText(status)}</Badge>;
 }
 
 const BUTTON = {
@@ -45,7 +46,8 @@ const BUTTON = {
 };
 
 export function Button({ variant = 'primary', icon, children, className = '', size = 'md', ...props }) {
-  const sizes = { sm: 'h-8 px-3 text-label-sm', md: 'h-10 px-4 text-label-md', lg: 'h-12 px-5 text-label-md' };
+  // Every size is at least 40px tall so it is easy to tap on a phone.
+  const sizes = { sm: 'h-10 px-3 text-label-md', md: 'h-11 px-4 text-label-md', lg: 'h-12 px-5 text-label-md' };
   return (
     <button
       type="button"
@@ -99,17 +101,18 @@ export function Tabs({ tabs, value, onChange }) {
   );
 }
 
-export function Modal({ open, onClose, title, children, footer, wide = false }) {
+/** `persistent` modals (long forms) ignore stray taps outside and Escape, so typed work isn't lost. */
+export function Modal({ open, onClose, title, children, footer, wide = false, persistent = false }) {
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || persistent) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, persistent]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={(e) => { e.stopPropagation(); onClose?.(); }}>
+      onClick={(e) => { e.stopPropagation(); if (!persistent) onClose?.(); }}>
       <div
         role="dialog"
         aria-modal="true"
@@ -118,7 +121,7 @@ export function Modal({ open, onClose, title, children, footer, wide = false }) 
       >
         <div className="sticky top-0 bg-surface-container-lowest flex items-center justify-between px-5 py-4 border-b border-outline-variant z-10">
           <h2 className="text-title-lg text-on-surface font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-surface-container" aria-label="Close">
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container" aria-label={t('Close')}>
             <Icon name="close" />
           </button>
         </div>
@@ -140,7 +143,7 @@ export function Field({ label, hint, children, className = '' }) {
 }
 
 export const inputClass =
-  'w-full h-10 px-3 rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:border-primary focus:outline-none';
+  'w-full h-11 px-3 rounded-lg border border-outline-variant bg-surface text-body-md text-on-surface focus:border-primary focus:outline-none';
 
 export function Input({ className = '', ...props }) {
   return <input className={`${inputClass} ${className}`} {...props} />;
@@ -188,28 +191,68 @@ export function Stat({ icon, label, value, note, tone = 'primary', onClick }) {
   );
 }
 
-export function Empty({ icon = 'inbox', title, children }) {
+export function Empty({ icon = 'inbox', title, children, action }) {
   return (
     <div className="text-center py-14 text-on-surface-variant">
       <Icon name={icon} size={48} className="opacity-30" />
       <p className="text-body-md font-medium mt-2">{title}</p>
       {children && <div className="text-label-md mt-1">{children}</div>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }
 
-export function Loading({ label = 'Loading...' }) {
+export function Loading({ label }) {
   return (
     <div className="flex items-center justify-center gap-2 py-12 text-on-surface-variant">
       <Icon name="progress_activity" className="animate-spin" />
-      <span className="text-body-md">{label}</span>
+      <span className="text-body-md">{label || t('Loading…')}</span>
     </div>
   );
 }
 
 export function ErrorNote({ children }) {
   if (!children) return null;
-  return <div className="bg-error-container text-on-error-container px-4 py-3 rounded-lg text-body-sm">{children}</div>;
+  return <div role="alert" className="bg-error-container text-on-error-container px-4 py-3 rounded-lg text-body-md">{children}</div>;
+}
+
+/** A load that failed — says so (instead of looking empty) and offers a retry. */
+export function LoadError({ message, onRetry }) {
+  return (
+    <div role="alert" className="text-center py-12 text-on-surface-variant">
+      <Icon name="cloud_off" size={44} className="opacity-40" />
+      <p className="text-body-md mt-2">{message || t('Could not load this page.')}</p>
+      {onRetry && <Button variant="secondary" icon="refresh" className="mt-3" onClick={onRetry}>{t('Try again')}</Button>}
+    </div>
+  );
+}
+
+/** Grey placeholder cards while a list loads. */
+export function Skeleton({ count = 6, className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3' }) {
+  return (
+    <div className={className} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="rounded-xl border border-outline-variant overflow-hidden animate-pulse">
+          <div className="h-32 bg-surface-container" />
+          <div className="p-3 space-y-2"><div className="h-3 bg-surface-container rounded w-3/4" /><div className="h-3 bg-surface-container rounded w-1/2" /></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Tap a common reason instead of typing it. */
+export function QuickReasons({ options, value, onPick }) {
+  return (
+    <div className="flex flex-wrap gap-2 mb-3">
+      {options.map((o) => (
+        <button key={o} type="button" onClick={() => onPick(t(o))} aria-pressed={value === t(o)}
+          className={`min-h-10 px-3 rounded-full border text-label-md ${value === t(o) ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant text-on-surface'}`}>
+          {t(o)}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /** Vertical status timeline with timestamps. */

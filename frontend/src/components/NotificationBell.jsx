@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { listNotifications, unreadNotifications, markNotificationRead, markAllNotificationsRead } from '../services/smb';
 import { Icon } from './ui';
 import { timeAgo } from '../utils/format';
+import { t } from '../i18n';
 
 const POLL_MS = 20000;
 
@@ -53,12 +54,12 @@ export default function NotificationBell({ onOpen }) {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 rounded-full hover:bg-surface-container text-on-surface-variant"
-        aria-label={`Notifications${count ? ` (${count} unread)` : ''}`}
+        className="relative flex flex-col items-center justify-center min-w-12 h-12 px-1 rounded-xl hover:bg-surface-container text-on-surface-variant"
+        aria-label={count ? t('Updates ({n} new)', { n: count }) : t('Updates')}
       >
-        <Icon name="notifications" filled={count > 0} />
+        <Icon name="notifications" filled={count > 0} /><span className="text-[11px] leading-tight">{t('Updates')}</span>
         {count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-error text-on-error text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-error text-on-error text-[10px] font-bold flex items-center justify-center">
             {count > 99 ? '99+' : count}
           </span>
         )}
@@ -66,13 +67,13 @@ export default function NotificationBell({ onOpen }) {
       {open && (
         <div className="absolute right-0 mt-2 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl z-50">
           <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant sticky top-0 bg-surface-container-lowest">
-            <p className="text-title-sm font-semibold text-on-surface">Notifications</p>
-            {count > 0 && <button onClick={readAll} className="text-label-sm text-primary font-medium">Mark all read</button>}
+            <p className="text-title-sm font-semibold text-on-surface">{t('Updates')}</p>
+            {count > 0 && <button onClick={readAll} className="h-10 px-2 text-label-md text-primary font-medium">{t('Mark all as read')}</button>}
           </div>
           {items === null ? (
-            <p className="p-4 text-label-md text-on-surface-variant">Loading…</p>
+            <p className="p-4 text-label-md text-on-surface-variant">{t('Loading…')}</p>
           ) : items.length === 0 ? (
-            <p className="p-6 text-center text-label-md text-on-surface-variant">You're all caught up.</p>
+            <p className="p-6 text-center text-label-md text-on-surface-variant">{t('No new updates.')}</p>
           ) : (
             items.map((n) => (
               <button

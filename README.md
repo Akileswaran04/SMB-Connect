@@ -65,6 +65,18 @@ cd frontend && npm install && npm run dev                              # http://
 Set `GROQ_API_KEY` in `backend/.env` for the AI features; without it they fall
 back to keyword rules. See `backend/.env.example` for every setting.
 
+`DEMO_LOGIN_ENABLED` and `OTP_DEV_MODE` are **off by default** — turn them on in
+`backend/.env` for local development only. Optional frontend settings
+(`VITE_API_URL`, and `VITE_SUPPORT_PHONE` / `VITE_SUPPORT_WHATSAPP` for the Help
+button) are in `frontend/.env.example`.
+
+### Languages
+
+Every screen string goes through `t('English text')` (`frontend/src/i18n.js`);
+Hindi and Tamil live in `frontend/src/translations.js`. Other languages show
+English screens, while chat, the assistant and voice still use them.
+`npm run check:i18n` fails if a string is missing a translation.
+
 ### Simulated in development
 
 These flows are complete, but talk to stand-ins until real providers are configured:

@@ -5,7 +5,8 @@ from pydantic import BaseModel, EmailStr, Field
 
 
 class RegisterRequest(BaseModel):
-    email: EmailStr
+    # Optional: many shop owners sign up with only a mobile number.
+    email: Optional[EmailStr] = None
     password: str = Field(..., min_length=6)
     role: Literal["seller", "buyer", "logistics"] = Field(..., description="Role picker shown at registration")
     full_name: Optional[str] = None

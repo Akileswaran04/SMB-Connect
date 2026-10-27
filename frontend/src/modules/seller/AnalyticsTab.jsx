@@ -10,6 +10,7 @@ import { sellerInsights, trustScore } from '../../services/smb';
 import { getSellerAnalytics } from '../../services/storage';
 import { PageHeader, Stat, Card, Loading, Empty, Select } from '../../components/ui';
 import { inr, dateShort, titleCase } from '../../utils/format';
+import { t } from '../../i18n';
 
 const MARK = '#00897b'; // brand teal, validated for data marks on white
 const SENTIMENT = { positive: '#2a78d6', neutral: '#b8b7b1', negative: '#d0453f' };
@@ -34,9 +35,9 @@ function ChartCard({ title, subtitle, rows, columns, children }) {
           <h2 className="text-title-sm font-semibold text-on-surface">{title}</h2>
           {subtitle && <p className="text-label-sm text-on-surface-variant">{subtitle}</p>}
         </div>
-        {rows.length > 0 && <button onClick={() => setTable((t) => !t)} className="text-label-sm text-primary">{table ? 'Show chart' : 'Show table'}</button>}
+        {rows.length > 0 && <button onClick={() => setTable((v) => !v)} className="h-10 px-2 text-label-md text-primary">{table ? t('Show chart') : t('Show as list')}</button>}
       </div>
-      {rows.length === 0 ? <Empty icon="bar_chart" title="No data for this period" /> : table ? (
+      {rows.length === 0 ? <Empty icon="bar_chart" title={t('No sales in this period')} /> : table ? (
         <table className="w-full text-label-md">
           <thead className="text-left text-on-surface-variant"><tr>{columns.map((c) => <th key={c.key} className="py-1">{c.label}</th>)}</tr></thead>
           <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-outline-variant/60">{columns.map((c) => <td key={c.key} className="py-1">{c.format ? c.format(r[c.key]) : r[c.key]}</td>)}</tr>)}</tbody>
@@ -99,18 +100,18 @@ export default function AnalyticsTab({ seller }) {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Analytics" subtitle="Sales, buyers and conversations — from your real orders and messages."
+      <PageHeader title={t('Sales report')} subtitle={t('How your shop is doing — from your real orders and messages.')}
         actions={(
-          <Select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Period">
-            <option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last year</option>
+          <Select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label={t('Period')}>
+            <option value={7}>{t('Last 7 days')}</option><option value={30}>{t('Last 30 days')}</option><option value={90}>{t('Last 3 months')}</option><option value={365}>{t('Last year')}</option>
           </Select>
         )} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Stat icon="currency_rupee" tone="green" label={`Revenue (${days} days)`} value={inr(ins.revenue)} />
-        <Stat icon="receipt_long" label="Orders" value={ins.orders} note={`Average order ${inr(ins.average_order_value)}`} />
-        <Stat icon="verified" tone="blue" label="Trust score" value={trust ? Math.round(trust.overall_score) : '—'} note={trust ? `Reviews ${Math.round(trust.review_score)} · cancellations ${Math.round((trust.cancellation_rate || 0) * 100)}%` : null} />
-        <Stat icon="sell" tone="purple" label="Offers received" value={offers} note={offers ? `${ins.negotiation.accepted || 0} accepted` : null} />
+        <Stat icon="currency_rupee" tone="green" label={t('Sales ({n} days)', { n: days })} value={inr(ins.revenue)} />
+        <Stat icon="receipt_long" label={t('Orders')} value={ins.orders} note={t('Average order {amount}', { amount: inr(ins.average_order_value) })} />
+        <Stat icon="verified" tone="blue" label={t('Trust score (out of 100)')} value={trust ? Math.round(trust.overall_score) : '—'} note={trust ? `Reviews ${Math.round(trust.review_score)} · cancellations ${Math.round((trust.cancellation_rate || 0) * 100)}%` : null} />
+        <Stat icon="sell" tone="purple" label={t('Price offers')} value={offers} note={offers ? t('{n} accepted', { n: ins.negotiation.accepted || 0 }) : null} />
       </div>
       {summary && (
         <p className="text-label-sm text-on-surface-variant">
@@ -120,22 +121,22 @@ export default function AnalyticsTab({ seller }) {
       )}
 
       <div className="grid lg:grid-cols-2 gap-4">
-        <ChartCard title="Revenue per day" rows={daily} columns={[{ key: 'label', label: 'Day' }, { key: 'revenue', label: 'Revenue', format: inr }]}>
+        <ChartCard title={t('Sales per day')} rows={daily} columns={[{ key: 'label', label: 'Day' }, { key: 'revenue', label: 'Revenue', format: inr }]}>
           <SeriesBars data={daily} dataKey="revenue" money />
         </ChartCard>
-        <ChartCard title="Orders per day" rows={daily} columns={[{ key: 'label', label: 'Day' }, { key: 'orders', label: 'Orders' }]}>
+        <ChartCard title={t('Orders per day')} rows={daily} columns={[{ key: 'label', label: 'Day' }, { key: 'orders', label: 'Orders' }]}>
           <SeriesBars data={daily} dataKey="orders" />
         </ChartCard>
-        <ChartCard title="Top products" subtitle="By revenue" rows={ins.top_products} columns={[{ key: 'name', label: 'Product' }, { key: 'units', label: 'Units' }, { key: 'revenue', label: 'Revenue', format: inr }]}>
+        <ChartCard title={t('Best-selling products')} rows={ins.top_products} columns={[{ key: 'name', label: 'Product' }, { key: 'units', label: 'Units' }, { key: 'revenue', label: 'Revenue', format: inr }]}>
           <HBars rows={ins.top_products} labelKey="name" valueKey="revenue" money />
         </ChartCard>
-        <ChartCard title="Top buyers" rows={ins.top_buyers} columns={[{ key: 'name', label: 'Buyer' }, { key: 'orders', label: 'Orders' }, { key: 'spent', label: 'Spent', format: inr }, { key: 'last_order', label: 'Last order', format: dateShort }]}>
+        <ChartCard title={t('Best customers')} rows={ins.top_buyers} columns={[{ key: 'name', label: 'Buyer' }, { key: 'orders', label: 'Orders' }, { key: 'spent', label: 'Spent', format: inr }, { key: 'last_order', label: 'Last order', format: dateShort }]}>
           <HBars rows={ins.top_buyers} labelKey="name" valueKey="spent" money />
         </ChartCard>
-        <ChartCard title="Messages by channel" subtitle={`${ins.messages} messages`} rows={sources} columns={[{ key: 'source', label: 'Channel' }, { key: 'messages', label: 'Messages' }]}>
+        <ChartCard title={t('Messages by channel')} subtitle={t('{n} messages', { n: ins.messages })} rows={sources} columns={[{ key: 'source', label: 'Channel' }, { key: 'messages', label: 'Messages' }]}>
           <HBars rows={sources} labelKey="source" valueKey="messages" />
         </ChartCard>
-        <ChartCard title="Buyer sentiment" subtitle="Tone of buyers' messages" rows={sentimentTotal ? sentiment : []} columns={[{ key: 'key', label: 'Tone', format: titleCase }, { key: 'value', label: 'Messages' }]}>
+        <ChartCard title={t('How happy buyers sound')} subtitle={t("Tone of buyers' messages")} rows={sentimentTotal ? sentiment : []} columns={[{ key: 'key', label: 'Tone', format: titleCase }, { key: 'value', label: 'Messages' }]}>
           <div className="flex h-7 rounded overflow-hidden gap-[2px]" role="img" aria-label={sentiment.map((s) => `${s.key} ${s.value}`).join(', ')}>
             {sentiment.filter((s) => s.value).map((s) => (
               <div key={s.key} title={`${titleCase(s.key)}: ${s.value}`} style={{ width: `${(s.value / sentimentTotal) * 100}%`, background: SENTIMENT[s.key] }} />

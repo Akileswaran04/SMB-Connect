@@ -3,11 +3,12 @@
  * availability, delivery date, returns, seller trust — then specifications,
  * description and reviews behind progressive disclosure.
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getProductDetails, addToCart, openConversationWithSeller, reportProduct } from '../../../services/smb';
 import NegotiationPanel from './NegotiationPanel';
-import { Icon, Badge, Button, Loading, ErrorNote, Modal, Textarea } from '../../../components/ui';
-import { inr, dayDate, dateShort } from '../../../utils/format';
+import { Icon, Badge, Button, Loading, ErrorNote, Modal, Textarea, QuickReasons } from '../../../components/ui';
+import { inr, dayDate, dateShort, REASONS } from '../../../utils/format';
+import { t } from '../../../i18n';
 
 export default function ProductPage({ productId, prefs, onClose, onToast, onCartChanged, onBuyNow, onChatOpened, onAskAssistant }) {
   const [p, setP] = useState(null);
@@ -19,6 +20,8 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
   const [image, setImage] = useState(0);
   const [reporting, setReporting] = useState(false);
   const [reason, setReason] = useState('');
+  const [needSize, setNeedSize] = useState(false);
+  const optionsRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,7 +34,7 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
       else if (sizes.length === 1) setSize(sizes[0]);
       const colors = [...new Set(d.variants.map((v) => v.color).filter(Boolean))];
       if (colors.length === 1) setColor(colors[0]);
-    }).catch((e) => !cancelled && setError(e.message || 'Product not found'));
+    }).catch((e) => !cancelled && setError(e.message));
     return () => { cancelled = true; };
   }, [productId, prefs]);
 
@@ -46,7 +49,9 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
 
   const needChoice = () => {
     if (hasVariants && !variant) {
-      onToast?.(`Choose ${sizes.length ? 'a size' : 'an option'} first`, 'error');
+      // Show where to choose instead of only saying so.
+      setNeedSize(true);
+      optionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return true;
     }
     return false;
@@ -59,9 +64,9 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
       await addToCart({ product_id: p.id, variant_id: variant?.id ?? null, quantity: qty });
       onCartChanged?.();
       if (thenCheckout) onBuyNow?.();
-      else onToast?.('Added to cart');
+      else onToast?.(t('Added to cart'));
     } catch (err) {
-      onToast?.(err.message || 'Could not add to cart', 'error');
+      onToast?.(err.message, 'error');
     } finally {
       setBusy('');
     }
@@ -73,7 +78,7 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
       const convo = await openConversationWithSeller(p.seller.id);
       onChatOpened?.(convo.id);
     } catch (err) {
-      onToast?.(err.message || 'Could not open chat', 'error');
+      onToast?.(err.message, 'error');
     } finally {
       setBusy('');
     }
@@ -84,9 +89,9 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
       await reportProduct(p.id, reason);
       setReporting(false);
       setReason('');
-      onToast?.('Thanks — our team will review this product.');
+      onToast?.(t('Thank you — our team will check this product.'));
     } catch (err) {
-      onToast?.(err.message || 'Could not report', 'error');
+      onToast?.(err.message, 'error');
     }
   };
 
@@ -94,7 +99,7 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
     <div className="fixed inset-0 z-40 bg-black/40 flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
       <div className="bg-surface-container-lowest w-full sm:max-w-4xl max-h-[95vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 z-10 flex justify-end p-2 bg-gradient-to-b from-surface-container-lowest to-transparent">
-          <button onClick={onClose} aria-label="Close" className="w-9 h-9 rounded-full bg-surface-container-lowest shadow flex items-center justify-center"><Icon name="close" /></button>
+          <button onClick={onClose} aria-label={t('Close')} className="w-11 h-11 rounded-full bg-surface-container-lowest shadow flex items-center justify-center"><Icon name="close" /></button>
         </div>
         <ErrorNote>{error}</ErrorNote>
         {!p && !error && <Loading />}
@@ -124,25 +129,27 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
                   {p.price_info?.discount_pct > 0 && !variant?.price && (
                     <>
                       <span className="text-body-md line-through text-on-surface-variant">{inr(p.price_info.listed)}</span>
-                      <Badge tone="green">{p.price_info.discount_pct}% off</Badge>
+                      <Badge tone="green">{t('{n}% off', { n: p.price_info.discount_pct })}</Badge>
                     </>
                   )}
                 </div>
-                {p.rating?.count > 0 && <p className="text-label-md text-on-surface-variant">{p.rating.average}★ · {p.rating.count} review{p.rating.count > 1 ? 's' : ''}</p>}
+                {p.rating?.count > 0 && <p className="text-label-md text-on-surface-variant">{p.rating.average}★ · {t('{n} reviews', { n: p.rating.count })}</p>}
                 {p.bulk_pricing?.length > 0 && (
-                  <p className="text-label-sm text-emerald-700 mt-1">{p.bulk_pricing.map((t) => `Buy ${t.min_qty}+ at ${inr(t.unit_price)} each`).join(' · ')}</p>
+                  <p className="text-label-sm text-emerald-700 mt-1">{p.bulk_pricing.map((b) => t('Buy {n} or more at {price} each', { n: b.min_qty, price: inr(b.unit_price) })).join(' · ')}</p>
                 )}
               </div>
 
+              <div ref={optionsRef} className={`space-y-4 rounded-xl ${needSize && hasVariants && !variant ? 'ring-2 ring-error p-3' : ''}`}>
+              {needSize && hasVariants && !variant && <p className="text-label-md text-error font-semibold">{t('Please choose a size / colour first')}</p>}
               {sizes.length > 0 && (
                 <div>
-                  <p className="text-label-md font-medium text-on-surface">Size {rememberedSize && sizes.includes(rememberedSize) && <span className="text-on-surface-variant font-normal">— you usually buy {rememberedSize}</span>}</p>
+                  <p className="text-label-md font-medium text-on-surface">{t('Size')} {rememberedSize && sizes.includes(rememberedSize) && <span className="text-on-surface-variant font-normal">— {t('you usually buy {size}', { size: rememberedSize })}</span>}</p>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     {sizes.map((s) => {
                       const inStock = p.variants.some((v) => v.size === s && (!color || v.color === color) && v.stock > 0);
                       return (
                         <button key={s} onClick={() => setSize(s)} disabled={!inStock} aria-pressed={size === s}
-                          className={`min-w-[44px] h-10 px-3 rounded-lg border text-label-md ${size === s ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant text-on-surface'} disabled:opacity-35 disabled:line-through`}>
+                          className={`min-w-12 h-12 px-3 rounded-lg border text-label-md ${size === s ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant text-on-surface'} disabled:opacity-35 disabled:line-through`}>
                           {s}
                         </button>
                       );
@@ -152,24 +159,25 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
               )}
               {colors.length > 1 && (
                 <div>
-                  <p className="text-label-md font-medium text-on-surface">Colour</p>
+                  <p className="text-label-md font-medium text-on-surface">{t('Colour')}</p>
                   <div className="flex flex-wrap gap-2 mt-1.5">
                     {colors.map((c) => (
                       <button key={c} onClick={() => setColor(c)} aria-pressed={color === c}
-                        className={`h-10 px-3 rounded-lg border text-label-md ${color === c ? 'border-primary bg-primary-container/15 text-primary' : 'border-outline-variant text-on-surface'}`}>{c}</button>
+                        className={`h-12 px-3 rounded-lg border text-label-md ${color === c ? 'border-primary bg-primary-container/15 text-primary' : 'border-outline-variant text-on-surface'}`}>{c}</button>
                     ))}
                   </div>
                 </div>
               )}
+              </div>
 
               <ul className="space-y-1.5 text-label-md">
                 <li className={`flex items-center gap-2 ${stock > 0 ? 'text-emerald-700' : 'text-error'}`}>
                   <Icon name={stock > 0 ? 'check_circle' : 'cancel'} size={18} />
-                  {hasVariants && !variant ? 'Choose an option to see availability' : stock > 0 ? `In stock${stock <= 5 ? ` — only ${stock} left` : ''}` : 'Out of stock'}
+                  {hasVariants && !variant ? t('Choose a size / colour to see if it is in stock') : stock > 0 ? (stock <= 5 ? t('In stock — only {n} left', { n: stock }) : t('In stock')) : t('Out of stock')}
                 </li>
                 <li className="flex items-center gap-2 text-on-surface">
                   <Icon name="local_shipping" size={18} className="text-on-surface-variant" />
-                  Delivery by <strong>{dayDate(p.delivery.standard_date)}</strong>{p.delivery.express_available && ' · express next-day available'}
+                  {t('Delivery by')} <strong>{dayDate(p.delivery.standard_date)}</strong>{p.delivery.express_available && ` · ${t('next-day delivery possible')}`}
                 </li>
                 <li className="flex items-center gap-2 text-on-surface">
                   <Icon name="assignment_return" size={18} className="text-on-surface-variant" />{p.return_summary}
@@ -177,46 +185,46 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
               </ul>
 
               <div className="flex items-center gap-3">
-                <span className="text-label-md text-on-surface">Qty</span>
+                <span className="text-label-md text-on-surface">{t('How many')}</span>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-9 h-9 rounded-lg border border-outline-variant" aria-label="Less">−</button>
-                  <span className="w-10 text-center text-label-md">{qty}</span>
-                  <button onClick={() => setQty(Math.min(Math.max(stock, 1), qty + 1))} className="w-9 h-9 rounded-lg border border-outline-variant" aria-label="More">+</button>
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="w-12 h-12 rounded-lg border border-outline-variant text-title-lg" aria-label={t('One less')}>−</button>
+                  <span className="w-12 text-center text-title-md font-semibold">{qty}</span>
+                  <button onClick={() => setQty(Math.min(Math.max(stock, 1), qty + 1))} className="w-12 h-12 rounded-lg border border-outline-variant text-title-lg" aria-label={t('One more')}>+</button>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline" size="lg" icon="add_shopping_cart" disabled={!!busy || (hasVariants && variant && stock === 0) || (!hasVariants && stock === 0)} onClick={() => add(false)}>
-                  {busy === 'cart' ? 'Adding…' : 'Add to cart'}
+                  {busy === 'cart' ? t('Please wait…') : t('Add to cart')}
                 </Button>
                 <Button size="lg" icon="bolt" disabled={!!busy || (hasVariants && variant && stock === 0) || (!hasVariants && stock === 0)} onClick={() => add(true)}>
-                  {busy === 'buy' ? 'Please wait…' : 'Buy now'}
+                  {busy === 'buy' ? t('Please wait…') : t('Buy now')}
                 </Button>
               </div>
               {p.negotiation_enabled && (
                 <NegotiationPanel product={p} variantId={variant?.id} needsVariant={hasVariants} quantity={qty} onToast={onToast} onAddedToCart={onCartChanged} />
               )}
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="secondary" icon="chat" onClick={chat} disabled={busy === 'chat'}>Chat with seller</Button>
-                <Button variant="secondary" icon="assistant" onClick={() => onAskAssistant({ current_product_id: p.id, product_ids: [p.id] })}>Ask a question</Button>
+                <Button variant="secondary" icon="chat" onClick={chat} disabled={busy === 'chat'}>{t('Chat with seller')}</Button>
+                <Button variant="secondary" icon="assistant" onClick={() => onAskAssistant({ current_product_id: p.id, product_ids: [p.id] })}>{t('Ask a question')}</Button>
               </div>
 
               <div className="border border-outline-variant rounded-xl p-3 flex items-center gap-3">
                 <span className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center"><Icon name="storefront" /></span>
                 <div className="min-w-0 flex-1">
                   <p className="text-label-md font-semibold text-on-surface truncate">{p.seller.business_name}</p>
-                  <p className="text-label-sm text-on-surface-variant">{p.seller.city} · on SMBConnect since {dateShort(p.seller.member_since)}</p>
+                  <p className="text-label-sm text-on-surface-variant">{p.seller.city} · {t('selling here since {date}', { date: dateShort(p.seller.member_since) })}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  {p.seller.verification_status === 'verified' && <Badge tone="blue"><Icon name="verified" size={14} />Verified</Badge>}
-                  {p.seller.trust_score != null && <Badge tone="green">Trust {Math.round(p.seller.trust_score)}</Badge>}
+                  {p.seller.verification_status === 'verified' && <Badge tone="blue"><Icon name="verified" size={14} />{t('Verified')}</Badge>}
+                  {p.seller.trust_score >= 70 && <Badge tone="green"><Icon name="thumb_up" size={14} />{t('Trusted seller')}</Badge>}
                 </div>
               </div>
 
               <details className="border-t border-outline-variant pt-3">
-                <summary className="text-label-md text-primary font-semibold cursor-pointer">More details</summary>
+                <summary className="text-label-md text-primary font-semibold cursor-pointer min-h-10 flex items-center">{t('More details')}</summary>
                 <div className="mt-3 space-y-3">
-                  <p className="text-body-md text-on-surface-variant whitespace-pre-line">{p.description || 'No description provided.'}</p>
+                  <p className="text-body-md text-on-surface-variant whitespace-pre-line">{p.description || t('No description yet.')}</p>
                   {Object.keys(p.specifications || {}).length > 0 && (
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-label-md">
                       {Object.entries(p.specifications).map(([k, v]) => (
@@ -224,34 +232,34 @@ export default function ProductPage({ productId, prefs, onClose, onToast, onCart
                       ))}
                     </dl>
                   )}
-                  {p.sku && <p className="text-label-sm text-on-surface-variant">SKU {variant?.sku || p.sku}</p>}
                 </div>
               </details>
 
               <details className="border-t border-outline-variant pt-3" open={p.reviews.length > 0 && p.reviews.length <= 2}>
-                <summary className="text-label-md text-primary font-semibold cursor-pointer">Reviews ({p.rating.count})</summary>
+                <summary className="text-label-md text-primary font-semibold cursor-pointer min-h-10 flex items-center">{t('Reviews')} ({p.rating.count})</summary>
                 <div className="mt-2 space-y-3">
-                  {p.reviews.length === 0 && <p className="text-label-md text-on-surface-variant">No reviews yet.</p>}
+                  {p.reviews.length === 0 && <p className="text-label-md text-on-surface-variant">{t('No reviews yet.')}</p>}
                   {p.reviews.map((r) => (
                     <div key={r.id} className="text-label-md">
                       <p className="text-on-surface"><span className="text-amber-600">{'★'.repeat(r.rating)}</span> {r.title && <strong>{r.title}</strong>}</p>
                       {r.comment && <p className="text-on-surface-variant">{r.comment}</p>}
-                      <p className="text-label-sm text-on-surface-variant">{r.customer_name}{r.is_verified_purchase ? ' · Verified purchase' : ''} · {dateShort(r.created_at)}</p>
-                      {r.seller_reply && <p className="text-label-sm text-on-surface mt-1 pl-3 border-l-2 border-outline-variant">Seller: {r.seller_reply}</p>}
+                      <p className="text-label-sm text-on-surface-variant">{r.customer_name}{r.is_verified_purchase ? ` · ${t('Bought here')}` : ''} · {dateShort(r.created_at)}</p>
+                      {r.seller_reply && <p className="text-label-sm text-on-surface mt-1 pl-3 border-l-2 border-outline-variant">{t('Seller')}: {r.seller_reply}</p>}
                     </div>
                   ))}
                 </div>
               </details>
-              <button onClick={() => setReporting(true)} className="text-label-sm text-on-surface-variant hover:text-error inline-flex items-center gap-1">
-                <Icon name="flag" size={14} /> Report this product
+              <button onClick={() => setReporting(true)} className="min-h-10 text-label-sm text-on-surface-variant hover:text-error inline-flex items-center gap-1">
+                <Icon name="flag" size={16} /> {t('Report a problem with this product')}
               </button>
             </div>
           </div>
         )}
       </div>
-      <Modal open={reporting} onClose={() => setReporting(false)} title="Report product"
-        footer={<><Button variant="secondary" onClick={() => setReporting(false)}>Cancel</Button><Button variant="danger" disabled={reason.trim().length < 3} onClick={submitReport}>Report</Button></>}>
-        <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="What's wrong with this listing?" />
+      <Modal open={reporting} onClose={() => setReporting(false)} title={t('Report a problem')}
+        footer={<><Button variant="secondary" onClick={() => setReporting(false)}>{t('Cancel')}</Button><Button variant="danger" disabled={reason.trim().length < 3} onClick={submitReport}>{t('Send')}</Button></>}>
+        <QuickReasons options={REASONS.report} value={reason} onPick={setReason} />
+        <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('Or tell us what is wrong')} />
       </Modal>
     </div>
   );

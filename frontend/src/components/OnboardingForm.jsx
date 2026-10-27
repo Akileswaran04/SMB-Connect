@@ -1,5 +1,7 @@
-
+/** First-run shop setup for sellers whose account has no shop name yet. */
 import { useState } from 'react';
+import { t } from '../i18n';
+import LanguagePicker from './LanguagePicker';
 
 const CATEGORIES = [
   'Grocery & Essentials',
@@ -30,11 +32,11 @@ export default function OnboardingForm({ seller, onComplete }) {
     setError('');
 
     if (!form.storeName.trim()) {
-      setError('Please enter your store name');
+      setError(t('Please enter your shop name'));
       return;
     }
     if (!form.category) {
-      setError('Please select a category');
+      setError(t('Please choose what you sell'));
       return;
     }
 
@@ -49,12 +51,13 @@ export default function OnboardingForm({ seller, onComplete }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface p-4">
       <main className="w-full max-w-[440px] bg-surface-container-lowest border border-outline-variant rounded-xl p-6 md:p-8 shadow-sm">
+        <div className="flex justify-end -mt-2 mb-2"><LanguagePicker /></div>
         <header className="flex flex-col items-center text-center mb-6">
           <div className="w-16 h-16 rounded-full bg-primary-container/20 text-primary flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-[32px]">celebration</span>
           </div>
-          <h1 className="text-headline-lg text-on-surface" style={{ fontWeight: 600 }}>Welcome!</h1>
-          <p className="text-body-md text-on-surface-variant mt-1">Set up your store in 30 seconds</p>
+          <h1 className="text-headline-lg text-on-surface" style={{ fontWeight: 600 }}>{t('Welcome!')}</h1>
+          <p className="text-body-md text-on-surface-variant mt-1">{t('Set up your shop in 30 seconds')}</p>
         </header>
 
         {error && (
@@ -65,7 +68,7 @@ export default function OnboardingForm({ seller, onComplete }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex flex-col gap-1">
-            <label className="text-label-md text-on-surface" htmlFor="storeName">Store Name *</label>
+            <label className="text-label-md text-on-surface" htmlFor="storeName">{t('Shop name')}</label>
             <div className="relative flex items-center">
               <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">storefront</span>
               <input
@@ -81,7 +84,7 @@ export default function OnboardingForm({ seller, onComplete }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-label-md text-on-surface" htmlFor="category">Business Category *</label>
+            <label className="text-label-md text-on-surface" htmlFor="category">{t('What do you sell?')}</label>
             <div className="relative flex items-center">
               <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">category</span>
               <select
@@ -90,9 +93,9 @@ export default function OnboardingForm({ seller, onComplete }) {
                 onChange={(e) => update('category', e.target.value)}
                 className="w-full h-12 pl-12 pr-4 rounded-lg border border-outline-variant bg-surface text-on-surface text-body-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors appearance-none"
               >
-                <option value="">Select a category</option>
+                <option value="">{t('Choose one')}</option>
                 {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>{t(cat)}</option>
                 ))}
               </select>
               <span className="material-symbols-outlined absolute right-4 text-on-surface-variant pointer-events-none">expand_more</span>
@@ -100,12 +103,13 @@ export default function OnboardingForm({ seller, onComplete }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-label-md text-on-surface" htmlFor="phone">Phone Number (optional)</label>
+            <label className="text-label-md text-on-surface" htmlFor="phone">{t('Mobile number (optional)')}</label>
             <div className="relative flex items-center">
               <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">call</span>
               <input
                 id="phone"
                 type="tel"
+                inputMode="tel"
                 value={form.phone}
                 onChange={(e) => update('phone', e.target.value)}
                 placeholder="+91 98765 43210"
@@ -115,7 +119,7 @@ export default function OnboardingForm({ seller, onComplete }) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-label-md text-on-surface" htmlFor="address">Store Address (optional)</label>
+            <label className="text-label-md text-on-surface" htmlFor="address">{t('Shop address (optional)')}</label>
             <div className="relative flex items-center">
               <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">location_on</span>
               <input
@@ -133,7 +137,7 @@ export default function OnboardingForm({ seller, onComplete }) {
             type="submit"
             className="w-full h-12 flex items-center justify-center bg-primary hover:bg-on-primary-fixed-variant text-on-primary text-label-md rounded-lg transition-all active:scale-[0.98] shadow-sm mt-2"
           >
-            Start Selling
+            {t('Start selling')}
             <span className="material-symbols-outlined text-[18px] ml-2">arrow_forward</span>
           </button>
         </form>

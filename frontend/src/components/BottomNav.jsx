@@ -1,4 +1,5 @@
 import { getPrimaryTabs, TAB_KEYS } from '../modules/MODULES';
+import { t } from '../i18n';
 
 const TABS = getPrimaryTabs();
 
@@ -28,7 +29,7 @@ export default function BottomNav({ activeTab, onTabChange, unreadCount, onMore 
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
-              <span className={`text-label-sm ${isActive ? 'text-on-surface font-semibold' : 'text-on-surface-variant'}`}>{tab.label}</span>
+              <span className={`text-label-sm ${isActive ? 'text-on-surface font-semibold' : 'text-on-surface-variant'}`}>{t(tab.label)}</span>
             </button>
           );
         })}

@@ -7,8 +7,9 @@ import { useState, useEffect } from 'react';
 import { compareProducts } from '../../../services/smb';
 import { Modal, Loading, ErrorNote, Icon, Badge } from '../../../components/ui';
 import { inr, deliveryText } from '../../../utils/format';
+import { t } from '../../../i18n';
 
-const BEST = { price: 'Lowest price', delivery: 'Fastest', quality: 'Best reviewed', seller_reliability: 'Most trusted seller' };
+const BEST = { price: 'Cheapest', delivery: 'Fastest', quality: 'Best reviews', seller_reliability: 'Most trusted seller' };
 
 export default function CompareModal({ productIds, onClose, onOpenProduct }) {
   const [result, setResult] = useState(null);
@@ -19,7 +20,7 @@ export default function CompareModal({ productIds, onClose, onOpenProduct }) {
     let cancelled = false;
     compareProducts(productIds)
       .then((d) => !cancelled && setResult(d))
-      .catch((e) => !cancelled && setError(e.message || 'Could not compare these products'));
+      .catch((e) => !cancelled && setError(e.message));
     return () => { cancelled = true; };
   }, [productIds]);
 
@@ -51,16 +52,16 @@ export default function CompareModal({ productIds, onClose, onOpenProduct }) {
                 <p className="text-label-md text-on-surface-variant">{deliveryText(row.delivery_days)}{row.express_available ? ' · express available' : ''}</p>
                 <p className="text-label-md text-on-surface-variant">Quality: {row.rating ? `${row.rating}★ (${row.rating_count})` : 'no reviews yet'}</p>
                 <p className="text-label-md text-on-surface-variant">Seller: {row.seller_name}{row.verified_seller ? ' ✓' : ''}{row.trust_score != null ? ` · trust ${Math.round(row.trust_score)}` : ''}</p>
-                <p className="text-label-md text-on-surface-variant">{row.stock > 0 ? `${row.stock} in stock` : 'Out of stock'}{row.sizes?.length ? ` · sizes ${row.sizes.join(', ')}` : ''}</p>
+                <p className="text-label-md text-on-surface-variant">{row.stock > 0 ? t('In stock') : t('Out of stock')}{row.sizes?.length ? ` · ${t('Sizes')} ${row.sizes.join(', ')}` : ''}</p>
                 {specs && Object.entries(row.specifications || {}).map(([k, v]) => (
                   <p key={k} className="text-label-sm text-on-surface"><span className="text-on-surface-variant">{k}:</span> {v}</p>
                 ))}
-                <button onClick={() => onOpenProduct?.(row.product_id)} className="text-label-md text-primary font-semibold">View product</button>
+                <button onClick={() => onOpenProduct?.(row.product_id)} className="min-h-10 text-label-md text-primary font-semibold">{t('See this')}</button>
               </div>
             ))}
           </div>
           <button onClick={() => setSpecs((s) => !s)} className="text-label-md text-primary font-medium">
-            {specs ? 'Hide full specifications' : 'Show full specifications'}
+            {specs ? t('Hide details') : t('Show all details')}
           </button>
         </div>
       )}

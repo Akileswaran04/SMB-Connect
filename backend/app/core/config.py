@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "technova"
 
     SECRET_KEY: str = "change-me-in-production"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    # Shop owners work from one phone all day — a week-long login avoids
+    # surprise log-outs in the middle of packing an order.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     ALGORITHM: str = "HS256"
 
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
@@ -31,8 +33,10 @@ class Settings(BaseSettings):
     PUBLIC_BASE_URL: str = "http://localhost:8000"
 
     # With no SMS/email provider configured, OTP codes are returned in the API
-    # response so the login flow can be used and tested. Turn off in production.
-    OTP_DEV_MODE: bool = True
+    # response so the login flow can be used and tested. Development only.
+    OTP_DEV_MODE: bool = False
+    # One-click demo accounts (passwordless). Development only.
+    DEMO_LOGIN_ENABLED: bool = False
     OTP_TTL_SECONDS: int = 300
     OTP_MAX_ATTEMPTS: int = 5
 

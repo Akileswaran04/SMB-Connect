@@ -13,22 +13,24 @@
   --text-headline-md--line-height: 2rem;
   --text-headline-sm: 1.25rem;
   --text-headline-sm--line-height: 1.75rem;
-  --text-title-lg: 1.125rem;
-  --text-title-lg--line-height: 1.625rem;
-  --text-title-md: 1rem;
-  --text-title-md--line-height: 1.5rem;
-  --text-title-sm: 0.9375rem;
-  --text-title-sm--line-height: 1.375rem;
-  --text-body-lg: 1rem;
-  --text-body-lg--line-height: 1.5rem;
-  --text-body-md: 0.9375rem;
-  --text-body-md--line-height: 1.375rem;
-  --text-body-sm: 0.8125rem;
+  /* Sized for shop owners reading on a phone in a busy shop:
+     nothing important below 14px, body text 16px. */
+  --text-title-lg: 1.25rem;
+  --text-title-lg--line-height: 1.75rem;
+  --text-title-md: 1.125rem;
+  --text-title-md--line-height: 1.625rem;
+  --text-title-sm: 1.0625rem;
+  --text-title-sm--line-height: 1.5rem;
+  --text-body-lg: 1.0625rem;
+  --text-body-lg--line-height: 1.625rem;
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 1.5rem;
+  --text-body-sm: 0.875rem;
   --text-body-sm--line-height: 1.25rem;
-  --text-label-md: 0.875rem;
-  --text-label-md--line-height: 1.25rem;
-  --text-label-sm: 0.75rem;
-  --text-label-sm--line-height: 1rem;
+  --text-label-md: 1rem;
+  --text-label-md--line-height: 1.5rem;
+  --text-label-sm: 0.875rem;
+  --text-label-sm--line-height: 1.25rem;
 
   /* Page content width (max-w-max-width) */
   --container-max-width: 80rem;
@@ -88,7 +90,8 @@
 
 /* ── Base styles ── */
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Inter has no Indian scripts; the Noto families render Tamil, Hindi, Telugu, Kannada and Malayalam. */
+  font-family: 'Inter', 'Noto Sans Devanagari', 'Noto Sans Tamil', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Malayalam', system-ui, -apple-system, sans-serif;
   background-color: var(--color-background);
   color: var(--color-on-background);
   line-height: 1.5;

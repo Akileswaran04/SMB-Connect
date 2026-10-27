@@ -1,91 +1,97 @@
-
-import { useRef } from 'react';
+/**
+ * Verification documents (GST certificate, shop licence, ID proof): take a
+ * photo or pick a file. Photos are shrunk on the phone so they always fit;
+ * PDFs must be under 1 MB. Up to 3 documents (the backend limit).
+ */
+import { useRef, useState } from 'react';
 import { generateId } from '../../../hooks/useLocalStorage';
+import { compressImage } from '../../../utils/image';
+import { Icon, Button, StatusBadge } from '../../../components/ui';
+import { dateShort } from '../../../utils/format';
+import { t } from '../../../i18n';
 
-export default function DocumentUpload({ documents = [], onChange }) {
-  const fileInputRef = useRef(null);
+const MAX_DOCS = 3;
+const MAX_PDF_BYTES = 1_000_000;
 
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+const readAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = (ev) => resolve(ev.target.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
 
-    for (const file of files) {
-      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-      if (!validTypes.includes(file.type)) continue;
+export default function DocumentUpload({ documents = [], onChange, onError }) {
+  const fileRef = useRef(null);
+  const cameraRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const full = documents.length >= MAX_DOCS;
 
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        onChange([...documents, {
-          id: generateId(), name: file.name, dataUrl: ev.target.result,
-          uploadedAt: new Date().toISOString(), status: 'pending',
-        }]);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []).slice(0, MAX_DOCS - documents.length);
     e.target.value = '';
-  };
-
-  const removeDocument = (docId) => {
-    onChange(documents.filter((d) => d.id !== docId));
-  };
-
-  const getStatusBadge = (status) => {
-    if (status === 'verified') return 'bg-emerald-100 text-emerald-800';
-    return 'bg-amber-100 text-amber-800';
+    if (!files.length) return;
+    setBusy(true);
+    try {
+      const added = [];
+      for (const file of files) {
+        let dataUrl;
+        if (file.type === 'application/pdf') {
+          if (file.size > MAX_PDF_BYTES) { onError?.(t('This PDF is too big. Please take a photo of the document instead.')); continue; }
+          dataUrl = await readAsDataUrl(file);
+        } else if (file.type.startsWith('image/')) {
+          dataUrl = await compressImage(file, { maxSide: 1600, quality: 0.75 });
+        } else {
+          onError?.(t('Please choose a photo or a PDF.'));
+          continue;
+        }
+        added.push({ id: generateId(), name: file.name || t('Document photo'), dataUrl, uploadedAt: new Date().toISOString(), status: 'pending' });
+      }
+      if (added.length) await onChange([...documents, ...added]);
+    } catch {
+      onError?.(t('Could not read that file. Please try again.'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="text-label-md text-on-surface flex items-center gap-2">
-          <span className="material-symbols-outlined text-[18px]">description</span>
-          Business Documents
-        </label>
-        <button type="button" onClick={() => fileInputRef.current?.click()}
-          className="h-10 px-3 bg-surface-container hover:bg-surface-container-high text-on-surface text-label-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors">
-          <span className="material-symbols-outlined text-[16px]">upload_file</span>
-          Upload File
-        </button>
-        <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple onChange={handleFileSelect} className="hidden" />
-      </div>
-
-      <p className="text-label-sm text-on-surface-variant">
-        Upload GST certificate, shop license, or ID proof (PDF, JPG, PNG)
+      <p className="text-body-md text-on-surface-variant">
+        {t('Add your GST certificate, shop licence or ID proof (Aadhaar / PAN). A clear photo is enough.')}
       </p>
-
-      {documents.length === 0 ? (
-        <div className="text-center py-6 border-2 border-dashed border-outline-variant rounded-xl text-on-surface-variant">
-          <span className="material-symbols-outlined text-[24px] opacity-40">description</span>
-          <p className="text-body-md mt-1">No documents uploaded yet</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {documents.map((doc) => (
-            <div key={doc.id} className="flex items-center justify-between bg-surface-container-low rounded-lg px-4 py-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="material-symbols-outlined text-[20px] text-on-surface-variant flex-shrink-0">
-                  {doc.name.endsWith('.pdf') ? 'picture_as_pdf' : 'image'}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-label-md text-on-surface font-medium truncate">{doc.name}</p>
-                  <p className="text-label-sm text-on-surface-variant">
-                    Uploaded {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`px-2 py-0.5 rounded-full text-label-sm font-medium capitalize ${getStatusBadge(doc.status)}`}>
-                  {doc.status}
-                </span>
-                <button onClick={() => removeDocument(doc.id)}
-                  className="p-1.5 hover:bg-error-container/30 text-on-surface-variant hover:text-error rounded-lg transition-colors" title="Remove document">
-                  <span className="material-symbols-outlined text-[16px]">close</span>
-                </button>
-              </div>
-            </div>
-          ))}
+      {!full && (
+        <div className="flex flex-wrap gap-2">
+          <Button size="lg" icon={busy ? 'progress_activity' : 'photo_camera'} disabled={busy} onClick={() => cameraRef.current?.click()}>{t('Take a photo')}</Button>
+          <Button size="lg" variant="secondary" icon="upload_file" disabled={busy} onClick={() => fileRef.current?.click()}>{t('Choose file')}</Button>
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleFiles} className="hidden" />
+          <input ref={fileRef} type="file" accept=".pdf,image/*" multiple onChange={handleFiles} className="hidden" />
         </div>
       )}
+      {documents.length === 0 ? (
+        <div className="text-center py-6 border-2 border-dashed border-outline-variant rounded-xl text-on-surface-variant">
+          <Icon name="description" size={32} className="opacity-40" />
+          <p className="text-body-md mt-1">{t('No documents added yet')}</p>
+        </div>
+      ) : (
+        <ul className="space-y-2">
+          {documents.map((doc) => (
+            <li key={doc.id} className="flex items-center gap-3 bg-surface-container-low rounded-lg px-3 py-2">
+              {doc.dataUrl?.startsWith('data:image') ? <img src={doc.dataUrl} alt="" className="w-12 h-12 rounded object-cover flex-shrink-0" />
+                : <Icon name="picture_as_pdf" size={32} className="text-on-surface-variant flex-shrink-0" />}
+              <div className="min-w-0 flex-1">
+                <p className="text-label-md text-on-surface font-medium truncate">{doc.name}</p>
+                <p className="text-label-sm text-on-surface-variant">{t('Added')} {dateShort(doc.uploadedAt)}</p>
+              </div>
+              <StatusBadge status={doc.status === 'verified' ? 'verified' : 'submitted'} />
+              <button onClick={() => window.confirm(t('Remove this document?')) && onChange(documents.filter((d) => d.id !== doc.id))}
+                className="w-10 h-10 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-error" aria-label={t('Remove')}>
+                <Icon name="delete" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {full && <p className="text-label-md text-on-surface-variant">{t('You can add up to 3 documents. Remove one to add another.')}</p>}
     </div>
   );
 }

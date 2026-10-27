@@ -5,6 +5,7 @@
  * (see app/core/ai.py + the /assistant/voice endpoint).
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { t } from '../i18n';
 
 const SpeechRecognitionCtor = typeof window !== 'undefined'
   ? (window.SpeechRecognition || window.webkitSpeechRecognition)
@@ -40,7 +41,7 @@ export default function useVoiceAssistant(language = 'en') {
 
   const startListening = useCallback((onResult) => {
     if (!SpeechRecognitionCtor) {
-      setError('Voice input is not supported in this browser');
+      setError(t('Voice works in Chrome or Edge. Please type instead.'));
       return;
     }
     setError('');
@@ -54,7 +55,7 @@ export default function useVoiceAssistant(language = 'en') {
       onResult(transcript);
     };
     recognition.onerror = (event) => {
-      setError(event.error === 'not-allowed' ? 'Microphone access was denied' : 'Could not hear that — try again');
+      setError(event.error === 'not-allowed' ? t('Please allow the microphone to speak.') : t('Could not hear that. Please try again.'));
       setListening(false);
     };
     recognition.onend = () => setListening(false);

@@ -1,0 +1,12 @@
+{
+  "name": "SMBConnect",
+  "short_name": "SMBConnect",
+  "description": "Sell and buy for your shop — orders, stock, delivery and payments in your language.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9f9ff",
+  "theme_color": "#00685f",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

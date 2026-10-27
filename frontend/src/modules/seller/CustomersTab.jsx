@@ -1,13 +1,19 @@
-/** Seller customers (PRD §29/§37): buyers who ordered from or messaged the store. */
-import { useState, useEffect } from 'react';
+/** Seller customers (PRD §29/§37): buyers who ordered from or messaged the shop. */
+import { useState, useEffect, useCallback } from 'react';
 import { sellerCustomers, openConversationWithBuyer } from '../../services/smb';
-import { PageHeader, Card, Loading, Empty, Button, Badge } from '../../components/ui';
+import { PageHeader, Card, Loading, LoadError, Empty, Button, Badge } from '../../components/ui';
 import { inr, dateShort } from '../../utils/format';
+import { t } from '../../i18n';
 import { TAB_KEYS } from '../MODULES';
 
 export default function CustomersTab({ go, onToast }) {
   const [rows, setRows] = useState(null);
-  useEffect(() => { sellerCustomers().then(setRows).catch(() => setRows([])); }, []);
+  const [error, setError] = useState('');
+  const load = useCallback(() => {
+    setError('');
+    sellerCustomers().then(setRows).catch((e) => setError(e.message));
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
   const message = async (c) => {
     try {
@@ -18,27 +24,20 @@ export default function CustomersTab({ go, onToast }) {
 
   return (
     <div>
-      <PageHeader title="Customers" subtitle="People who have bought from you or asked you something." />
-      {rows === null ? <Loading /> : rows.length === 0 ? <Empty icon="group" title="No customers yet" /> : (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-label-md">
-            <thead className="text-left text-on-surface-variant border-b border-outline-variant">
-              <tr><th className="p-3">Customer</th><th className="p-3">City</th><th className="p-3 text-right">Orders</th><th className="p-3 text-right">Spent</th><th className="p-3">Last order</th><th className="p-3" /></tr>
-            </thead>
-            <tbody>
-              {rows.map((c) => (
-                <tr key={c.buyer_id} className="border-b border-outline-variant/60">
-                  <td className="p-3 font-semibold text-on-surface">{c.name}{c.orders >= 2 && <Badge tone="green" className="ml-2">Repeat</Badge>}</td>
-                  <td className="p-3 text-on-surface-variant">{c.city || '—'}</td>
-                  <td className="p-3 text-right">{c.orders}</td>
-                  <td className="p-3 text-right">{inr(c.total_spent)}</td>
-                  <td className="p-3">{c.last_order_at ? dateShort(c.last_order_at) : '—'}</td>
-                  <td className="p-3 text-right"><Button size="sm" variant="secondary" icon="chat" onClick={() => message(c)}>Message</Button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+      <PageHeader title={t('Customers')} subtitle={t('People who bought from you or asked you something.')} />
+      {error ? <LoadError message={error} onRetry={load} /> : rows === null ? <Loading /> : rows.length === 0 ? <Empty icon="group" title={t('No customers yet')} /> : (
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {rows.map((c) => (
+            <Card key={c.buyer_id} className="p-4 flex flex-col gap-1">
+              <p className="text-title-sm font-semibold text-on-surface">{c.name}{c.orders >= 2 && <Badge tone="green" className="ml-2">{t('Comes back')}</Badge>}</p>
+              <p className="text-body-md text-on-surface-variant">
+                {[c.city, t('{n} orders', { n: c.orders }), inr(c.total_spent)].filter(Boolean).join(' · ')}
+              </p>
+              {c.last_order_at && <p className="text-label-md text-on-surface-variant">{t('Last order')}: {dateShort(c.last_order_at)}</p>}
+              <Button variant="secondary" icon="chat" className="mt-2 self-start" onClick={() => message(c)}>{t('Message')}</Button>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );

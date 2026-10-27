@@ -10,7 +10,8 @@ import BottomNav from '../../components/BottomNav';
 import Sidebar from '../../components/Sidebar';
 import NotificationBell from '../../components/NotificationBell';
 import Toast from '../../components/shared/Toast';
-import { Loading } from '../../components/ui';
+import { Loading, LoadError } from '../../components/ui';
+import { t } from '../../i18n';
 import { TAB_KEYS } from '../MODULES';
 
 const DashboardTab = lazy(() => import('./DashboardTab'));
@@ -28,6 +29,7 @@ const InboxTab = lazy(() => import('../unified-inbox').then((m) => ({ default: m
 export default function SellerApp({ onLogout }) {
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState(TAB_KEYS.DASHBOARD);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -37,14 +39,16 @@ export default function SellerApp({ onLogout }) {
   const showToast = useCallback((message, type = 'success') => setToast({ message, type }), []);
 
   const loadSeller = useCallback(async () => {
+    setLoadError('');
     try {
       setSeller(await getSellerById());
-    } catch {
-      onLogout();
+    } catch (err) {
+      // A real logout (401) is handled globally; anything else is shown with a retry.
+      setLoadError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [onLogout]);
+  }, []);
 
   useEffect(() => { loadSeller(); }, [loadSeller]);
 
@@ -79,13 +83,14 @@ export default function SellerApp({ onLogout }) {
     try {
       await updateSeller(seller.id, data);
       await loadSeller();
-      showToast('Welcome! Your store is set up');
-    } catch {
-      showToast('Failed to save profile', 'error');
+      showToast(t('Welcome! Your shop is ready.'));
+    } catch (err) {
+      showToast(err.message, 'error');
     }
   }, [seller, loadSeller, showToast]);
 
   if (loading) return <div className="min-h-screen bg-background"><Loading /></div>;
+  if (loadError) return <div className="min-h-screen bg-background p-4"><LoadError message={loadError} onRetry={() => { setLoading(true); loadSeller(); }} /></div>;
   if (!seller) return null;
   if (!seller.business_name) return <OnboardingForm seller={seller} onComplete={handleOnboardingComplete} />;
 

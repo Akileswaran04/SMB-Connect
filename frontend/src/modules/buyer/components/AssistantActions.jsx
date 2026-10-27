@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { sendOffer, openConversationWithSeller, sendChatMessage, addToCart, reorder } from '../../../services/smb';
 import { Button, Modal } from '../../../components/ui';
 import { inr } from '../../../utils/format';
+import { t } from '../../../i18n';
 
 const ICONS = { send_offer: 'sell', send_message: 'send', add_to_cart: 'add_shopping_cart', reorder: 'replay',
   track_order: 'local_shipping', view_product: 'visibility' };
@@ -23,8 +24,8 @@ export default function AssistantActions({ actions, onToast, onOpenOrder, onOpen
       if (action.type === 'send_offer') {
         const offer = await sendOffer(p.product_id, p.offered_price, p.quantity || 1);
         const msg = offer.status === 'accepted' ? 'Offer accepted — add it to your cart from the product page.'
-          : offer.status === 'countered' ? (offer.message || 'The seller countered your offer.')
-            : offer.status === 'rejected' ? (offer.message || 'The seller declined that price.') : 'Offer sent to the seller.';
+          : offer.status === 'countered' ? (offer.message || t('The seller replied with a different price.'))
+            : offer.status === 'rejected' ? (offer.message || t('The seller said no to that price')) : t('Sent to the seller.');
         onToast?.(msg, offer.status === 'rejected' ? 'error' : 'success');
       } else if (action.type === 'send_message') {
         const convo = await openConversationWithSeller(p.seller_id);
@@ -33,11 +34,11 @@ export default function AssistantActions({ actions, onToast, onOpenOrder, onOpen
         onOpenChat?.(convo.id);
       } else if (action.type === 'add_to_cart') {
         await addToCart({ product_id: p.product_id, variant_id: p.variant_id ?? null, quantity: 1 });
-        onToast?.('Added to cart');
+        onToast?.(t('Added to cart'));
         onOpenCart?.();
       } else if (action.type === 'reorder') {
         const r = await reorder(p.order_id);
-        onToast?.(r.added_to_cart ? 'Added to your cart — review and check out.' : 'Those items are no longer available.',
+        onToast?.(r.added_to_cart ? t('Added to your cart') : t('These items are not available now'),
           r.added_to_cart ? 'success' : 'error');
         if (r.added_to_cart) onOpenCart?.({ addressId: r.address_id, deliveryOption: r.delivery_option, paymentMethod: r.payment_method });
       } else if (action.type === 'track_order') {
@@ -47,7 +48,7 @@ export default function AssistantActions({ actions, onToast, onOpenOrder, onOpen
       }
       onDone?.(action);
     } catch (err) {
-      onToast?.(err.message || 'That did not work', 'error');
+      onToast?.(err.message, 'error');
     } finally {
       setBusy(false);
       setConfirm(null);
@@ -65,16 +66,16 @@ export default function AssistantActions({ actions, onToast, onOpenOrder, onOpen
           </Button>
         ))}
       </div>
-      <Modal open={!!confirm} onClose={() => setConfirm(null)} title="Please confirm"
+      <Modal open={!!confirm} onClose={() => setConfirm(null)} title={t('Please check')}
         footer={<>
-          <Button variant="secondary" onClick={() => setConfirm(null)}>Cancel</Button>
+          <Button variant="secondary" onClick={() => setConfirm(null)}>{t('Cancel')}</Button>
           <Button onClick={() => execute(confirm)} disabled={busy}>{busy ? 'Sending…' : 'Yes, send it'}</Button>
         </>}>
         {confirm?.type === 'send_offer' && (
-          <p className="text-body-md text-on-surface">Send an offer of <strong>{inr(confirm.payload.offered_price)}</strong> to the seller? If they accept, you can buy at this price.</p>
+          <p className="text-body-md text-on-surface">{t('Offer {price} to the seller? If they say yes, you can buy at this price.', { price: inr(confirm.payload.offered_price) })}</p>
         )}
         {confirm?.type === 'send_message' && (
-          <p className="text-body-md text-on-surface">Send this to the seller?<br /><em>“{confirm.payload.text}”</em></p>
+          <p className="text-body-md text-on-surface">{t('Send this to the seller?')}<br /><em>“{confirm.payload.text}”</em></p>
         )}
       </Modal>
     </>

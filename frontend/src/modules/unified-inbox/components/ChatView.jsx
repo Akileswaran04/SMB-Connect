@@ -1,4 +1,4 @@
-
+/** One conversation with a buyer: messages (translated), voice, quick replies and suggested replies. */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getConversationById, sendMessage, markAsRead, generateDraft, editDraft, sendDraft } from '../../../services/storage';
 import AIDraft from '../../ai-communication/components/AIDraft';
@@ -7,14 +7,17 @@ import ChatBubble from '../../../components/chat/ChatBubble';
 import VoiceInputButton from '../../../components/chat/VoiceInputButton';
 import useChatSocket from '../../../hooks/useChatSocket';
 import useVoiceAssistant from '../../../hooks/useVoiceAssistant';
-import { getSession } from '../../../services/storage';
+import { getLang, t } from '../../../i18n';
+
+// Answers a shop owner types twenty times a day — one tap fills the box.
+const QUICK_REPLIES = ['Yes, it is available', 'Sorry, it is out of stock', 'It will reach you in 2–3 days', 'This is the best price', 'Thank you for your order!'];
 
 function formatDateDivider(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
   const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 0) return t('Today');
+  if (diffDays === 1) return t('Yesterday');
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
@@ -42,7 +45,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
   const [aiDraft, setAiDraft] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const ws = useChatSocket();
-  const voice = useVoiceAssistant(getSession()?.language || 'en');
+  const voice = useVoiceAssistant(getLang());
 
   const reload = useCallback(async () => {
     const data = await getConversationById(conversationId);
@@ -124,7 +127,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
       await handleSendRaw(transcript.trim(), 'voice');
       onRefresh?.();
     } catch (err) {
-      onToast?.(err.message || 'Failed to send voice message', 'error');
+      onToast?.(err.message, 'error');
     }
   }, [handleSendRaw, onRefresh, onToast]);
 
@@ -135,12 +138,12 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
     try {
       if (editedText !== undefined) await editDraft(aiDraft.id, editedText);
       await sendDraft(aiDraft.id);
-      onToast?.(editedText !== undefined ? 'Edited response approved and sent' : 'AI response approved and sent');
+      onToast?.(t('Reply sent'));
       setAiDraft(null);
       await reload();
       onRefresh?.();
     } catch (err) {
-      onToast?.(err.message || 'Could not send the draft — try again', 'error');
+      onToast?.(err.message, 'error');
     }
   }, [aiDraft, reload, onRefresh, onToast]);
 
@@ -162,11 +165,11 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
         leadScore: draft.lead_score ?? null,
       });
     } catch (err) {
-      console.error('Failed to rewrite draft:', err);
+      onToast?.(err.message, 'error');
     } finally {
       setIsAnalyzing(false);
     }
-  }, [aiDraft, conversationId]);
+  }, [aiDraft, conversationId, onToast]);
 
   const handleDismissDraft = useCallback(() => {
     setAiDraft(null);
@@ -182,7 +185,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
       onRefresh?.();
       inputRef.current?.focus();
     } catch (err) {
-      console.error('Failed to send message:', err);
+      onToast?.(err.message, 'error');
     }
   };
 
@@ -210,6 +213,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
       <div className="flex items-center gap-3 px-4 py-3 border-b border-outline-variant bg-surface-container-lowest flex-shrink-0">
         <button
           onClick={onBack}
+          aria-label={t('Back')}
           className="lg:hidden p-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors"
         >
           <span className="material-symbols-outlined">arrow_back</span>
@@ -221,22 +225,20 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
 
         <div className="flex-1 min-w-0">
           <h3 className="text-label-md text-on-surface font-semibold truncate">{convo.customerName}</h3>
-          <p className="text-label-sm text-on-surface-variant">Customer</p>
+          <p className="text-label-sm text-on-surface-variant">{t('Customer')}</p>
         </div>
       </div>
 
       <AutoReplyToggle
         enabled={aiEnabled}
         onToggle={setAiEnabled}
-        mode="approval"
-        onModeChange={() => {}}
       />
 
       <div className="flex-1 overflow-y-auto px-4 py-4 bg-background/50">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-on-surface-variant">
             <span className="material-symbols-outlined text-[48px] opacity-30">chat_bubble_outline</span>
-            <p className="text-body-md mt-2">Start a conversation</p>
+            <p className="text-body-md mt-2">{t('Say hello to start the chat')}</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -252,7 +254,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
                 <ChatBubble message={msg} mine={msg.senderType === 'seller'} onSpeak={voice.speak} />
                 {msg.isAI && (
                   <p className="text-right text-label-sm text-primary -mt-1 mb-1 inline-flex items-center gap-0.5 w-full justify-end">
-                    <span className="material-symbols-outlined text-[12px]">auto_awesome</span>AI-drafted, approved by you
+                    <span className="material-symbols-outlined text-[12px]">auto_awesome</span>{t('Suggested reply, sent by you')}
                   </p>
                 )}
               </div>
@@ -261,7 +263,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
             {isAnalyzing && (
               <div className="flex items-center gap-2 px-4 py-2 text-label-sm text-primary">
                 <span className="material-symbols-outlined text-[16px] animate-pulse">auto_awesome</span>
-                <span>AI is drafting a reply for your approval...</span>
+                <span>{t('Writing a suggested reply…')}</span>
               </div>
             )}
 
@@ -280,7 +282,13 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
         />
       )}
 
-      <div className="flex items-end gap-2 px-4 py-3 border-t border-outline-variant bg-surface-container-lowest flex-shrink-0">
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar px-4 pt-2 border-t border-outline-variant bg-surface-container-lowest flex-shrink-0">
+        {QUICK_REPLIES.map((q) => (
+          <button key={q} onClick={() => { setInput(t(q)); inputRef.current?.focus(); }}
+            className="h-9 px-3 rounded-full border border-outline-variant text-label-md text-on-surface whitespace-nowrap hover:border-primary hover:text-primary">{t(q)}</button>
+        ))}
+      </div>
+      <div className="flex items-end gap-2 px-4 py-3 bg-surface-container-lowest flex-shrink-0">
         <VoiceInputButton voice={voice} onTranscript={handleVoice} />
         <div className="flex-1 relative">
           <textarea
@@ -288,7 +296,7 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={aiEnabled ? "Type a message (AI will draft a reply for approval)..." : "Type a message..."}
+            placeholder={t('Type a message, or tap the mic to speak')}
             rows={1}
             className="w-full px-4 py-2.5 rounded-2xl border border-outline-variant bg-surface text-on-surface text-body-md focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors resize-none max-h-32"
             style={{ minHeight: '42px' }}
@@ -298,7 +306,8 @@ export default function ChatView({ conversationId, sellerId, onBack, onRefresh, 
         <button
           onClick={handleSend}
           disabled={!input.trim()}
-          className="p-2.5 rounded-full bg-primary hover:bg-on-primary-fixed-variant disabled:bg-surface-container text-on-primary disabled:text-on-surface-variant transition-colors flex-shrink-0 active:scale-95"
+          aria-label={t('Send')}
+          className="w-11 h-11 flex items-center justify-center rounded-full bg-primary hover:bg-on-primary-fixed-variant disabled:bg-surface-container text-on-primary disabled:text-on-surface-variant transition-colors flex-shrink-0 active:scale-95"
         >
           <span className="material-symbols-outlined text-[22px]">send</span>
         </button>

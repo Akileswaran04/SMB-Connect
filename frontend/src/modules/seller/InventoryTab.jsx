@@ -1,37 +1,49 @@
 /**
- * Seller inventory (PRD §33): per product or variant — on hand, reserved by
- * open orders, available to sell, incoming — with adjustments, incoming
- * stock and a full change log. Stock that reaches zero makes the item
- * unavailable to buyers automatically.
+ * Seller stock (PRD §33), one card per product or size: how many are free
+ * to sell and how many are on hold for orders. Changing stock is "Add",
+ * "Remove" or "I now have…" — no negative numbers to type. Stock arriving
+ * from a supplier and the change history sit behind "More".
  */
 import { useState, useEffect, useCallback } from 'react';
 import { getInventory, adjustInventory, setIncoming, receiveIncoming, inventoryLog } from '../../services/smb';
-import { PageHeader, Stat, Tabs, Loading, Empty, Badge, Button, Modal, Field, Input, Card } from '../../components/ui';
+import { PageHeader, Stat, Tabs, Loading, LoadError, Empty, Badge, Button, Modal, Field, Input, Card } from '../../components/ui';
 import { dateTime, titleCase } from '../../utils/format';
+import { t } from '../../i18n';
 
-const STATE = { out_of_stock: ['red', 'Out of stock'], low_stock: ['amber', 'Low stock'], in_stock: ['green', 'In stock'] };
+const STATE = { out_of_stock: ['red', 'Out of stock'], low_stock: ['amber', 'Running low'], in_stock: ['green', 'In stock'] };
+const TITLES = { add: 'Add stock', remove: 'Remove stock', set: 'Count your stock', incoming: 'Stock on the way' };
 
 export default function InventoryTab({ onToast }) {
   const [data, setData] = useState(null);
+  const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
-  const [edit, setEdit] = useState(null); // { row, mode: 'adjust'|'incoming' }
+  const [edit, setEdit] = useState(null); // { row, mode: 'add'|'remove'|'set'|'incoming' }
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [log, setLog] = useState(null);
 
-  const load = useCallback(async () => setData(await getInventory(filter === 'all' ? undefined : filter).catch(() => ({ items: [], summary: {} }))), [filter]);
+  const load = useCallback(async () => {
+    setError('');
+    try { setData(await getInventory(filter === 'all' ? undefined : filter)); } catch (err) { setError(err.message); }
+  }, [filter]);
   useEffect(() => { load(); }, [load]);
 
   const key = (r) => ({ product_id: r.product_id, variant_id: r.variant_id });
+  const open = (row, mode) => { setAmount(''); setNote(''); setEdit({ row, mode }); };
 
   const submit = async () => {
+    const n = Number(amount);
+    const { row, mode } = edit;
     try {
-      if (edit.mode === 'adjust') await adjustInventory({ ...key(edit.row), delta: Number(amount), note: note || null });
-      else await setIncoming({ ...key(edit.row), quantity: Number(amount) });
-      onToast?.(edit.mode === 'adjust' ? 'Stock updated' : 'Incoming stock recorded');
+      if (mode === 'incoming') {
+        await setIncoming({ ...key(row), quantity: n });
+      } else {
+        const delta = mode === 'add' ? n : mode === 'remove' ? -n : n - row.on_hand;
+        if (delta === 0) { setEdit(null); return; }
+        await adjustInventory({ ...key(row), delta, note: note || (mode === 'set' ? 'Stock count' : null) });
+      }
+      onToast?.(mode === 'incoming' ? t('Saved') : t('Stock updated'));
       setEdit(null);
-      setAmount('');
-      setNote('');
       load();
     } catch (err) { onToast?.(err.message, 'error'); }
   };
@@ -39,76 +51,86 @@ export default function InventoryTab({ onToast }) {
   const receive = async (row) => {
     try {
       const r = await receiveIncoming(key(row));
-      onToast?.(`${r.received} units added to stock`);
+      onToast?.(t('{n} added to your stock', { n: r.received }));
       load();
     } catch (err) { onToast?.(err.message, 'error'); }
   };
 
+  const showLog = async (row) => {
+    try { setLog({ row, items: await inventoryLog(row.product_id) }); } catch (err) { onToast?.(err.message, 'error'); }
+  };
+
   const s = data?.summary || {};
+  const mode = edit?.mode;
   return (
     <div>
-      <PageHeader title="Inventory" subtitle="Stock held for open orders is reserved, so you never oversell." />
+      <PageHeader title={t('Stock')} subtitle={t('Items in open orders are kept on hold, so you never sell more than you have.')} />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <Stat icon="error" tone="red" label="Out of stock" value={s.out_of_stock ?? '—'} onClick={() => setFilter('out_of_stock')} />
-        <Stat icon="warning" tone="amber" label="Low stock" value={s.low_stock ?? '—'} onClick={() => setFilter('low_stock')} />
-        <Stat icon="lock" tone="blue" label="Reserved units" value={s.reserved_units ?? '—'} />
-        <Stat icon="local_shipping" tone="indigo" label="Incoming units" value={s.incoming_units ?? '—'} />
+        <Stat icon="error" tone="red" label={t('Out of stock')} value={s.out_of_stock ?? '—'} onClick={() => setFilter('out_of_stock')} />
+        <Stat icon="warning" tone="amber" label={t('Running low')} value={s.low_stock ?? '—'} onClick={() => setFilter('low_stock')} />
+        <Stat icon="lock" tone="blue" label={t('On hold for orders')} value={s.reserved_units ?? '—'} />
+        <Stat icon="local_shipping" tone="indigo" label={t('On the way from supplier')} value={s.incoming_units ?? '—'} />
       </div>
-      <Tabs value={filter} onChange={setFilter} tabs={[{ key: 'all', label: 'All' }, { key: 'low_stock', label: 'Low stock' }, { key: 'out_of_stock', label: 'Out of stock' }, { key: 'in_stock', label: 'In stock' }]} />
-      {!data ? <Loading /> : data.items.length === 0 ? <Empty icon="shelves" title="Nothing here" /> : (
-        <Card className="overflow-x-auto">
-          <table className="w-full text-label-md">
-            <thead className="text-left text-on-surface-variant border-b border-outline-variant">
-              <tr><th className="p-3">Product</th><th className="p-3">SKU</th><th className="p-3 text-right">On hand</th><th className="p-3 text-right">Reserved</th>
-                <th className="p-3 text-right">Available</th><th className="p-3 text-right">Incoming</th><th className="p-3">Status</th><th className="p-3" /></tr>
-            </thead>
-            <tbody>
-              {data.items.map((r) => (
-                <tr key={`${r.product_id}-${r.variant_id}`} className="border-b border-outline-variant/60">
-                  <td className="p-3"><span className="font-semibold text-on-surface">{r.name}</span>{r.variant_label && <span className="block text-label-sm text-on-surface-variant">{r.variant_label}</span>}</td>
-                  <td className="p-3 text-on-surface-variant">{r.sku || '—'}</td>
-                  <td className="p-3 text-right">{r.on_hand}</td>
-                  <td className="p-3 text-right">{r.reserved}</td>
-                  <td className="p-3 text-right font-semibold">{r.available_to_sell}</td>
-                  <td className="p-3 text-right">{r.incoming || '—'}</td>
-                  <td className="p-3"><Badge tone={STATE[r.state][0]}>{STATE[r.state][1]}</Badge></td>
-                  <td className="p-3 whitespace-nowrap text-right">
-                    <Button size="sm" variant="secondary" onClick={() => setEdit({ row: r, mode: 'adjust' })}>Adjust</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEdit({ row: r, mode: 'incoming' })}>Incoming</Button>
-                    {r.incoming > 0 && <Button size="sm" variant="ghost" onClick={() => receive(r)}>Receive</Button>}
-                    <Button size="sm" variant="ghost" onClick={async () => setLog({ row: r, items: await inventoryLog(r.product_id) })}>Log</Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+      <Tabs value={filter} onChange={setFilter} tabs={[{ key: 'all', label: t('All') }, { key: 'low_stock', label: t('Running low') }, { key: 'out_of_stock', label: t('Out of stock') }, { key: 'in_stock', label: t('In stock') }]} />
+      {error ? <LoadError message={error} onRetry={load} /> : !data ? <Loading /> : data.items.length === 0 ? <Empty icon="shelves" title={t('Nothing here')} /> : (
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {data.items.map((r) => (
+            <Card key={`${r.product_id}-${r.variant_id}`} className="p-4 flex flex-col gap-2">
+              <div className="flex justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-title-sm font-semibold text-on-surface">{r.name}</p>
+                  {r.variant_label && <p className="text-label-md text-on-surface-variant">{r.variant_label}</p>}
+                </div>
+                <Badge tone={STATE[r.state][0]}>{t(STATE[r.state][1])}</Badge>
+              </div>
+              <p className="text-body-md">
+                <span className="text-headline-sm font-bold text-on-surface">{r.available_to_sell}</span> {t('free to sell')}
+                {r.reserved > 0 && <span className="text-on-surface-variant"> · {t('{n} on hold', { n: r.reserved })}</span>}
+                {r.incoming > 0 && <span className="text-on-surface-variant"> · {t('{n} on the way', { n: r.incoming })}</span>}
+              </p>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <Button icon="add" onClick={() => open(r, 'add')}>{t('Add stock')}</Button>
+                <Button variant="secondary" icon="remove" onClick={() => open(r, 'remove')}>{t('Remove stock')}</Button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                <Button variant="ghost" size="sm" icon="calculate" onClick={() => open(r, 'set')}>{t('I now have…')}</Button>
+                <Button variant="ghost" size="sm" icon="history" onClick={() => showLog(r)}>{t('History')}</Button>
+                <Button variant="ghost" size="sm" icon="local_shipping" onClick={() => open(r, 'incoming')}>{t('Stock on the way')}</Button>
+                {r.incoming > 0 && <Button variant="ghost" size="sm" icon="move_to_inbox" onClick={() => receive(r)}>{t('It arrived')}</Button>}
+              </div>
+            </Card>
+          ))}
+        </div>
       )}
 
-      <Modal open={!!edit} onClose={() => setEdit(null)} title={edit?.mode === 'adjust' ? 'Adjust stock' : 'Incoming stock'}
-        footer={<Button onClick={submit} disabled={!amount}>Save</Button>}>
-        <p className="text-label-md text-on-surface-variant mb-3">{edit?.row.name}{edit?.row.variant_label ? ` — ${edit.row.variant_label}` : ''} · {edit?.row.available_to_sell} available</p>
-        <Field label={edit?.mode === 'adjust' ? 'Change (e.g. 10 to add, -2 to remove)' : 'Units on the way'}>
-          <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+      <Modal open={!!edit} onClose={() => setEdit(null)} title={t(TITLES[mode] || '')}
+        footer={<><Button variant="secondary" onClick={() => setEdit(null)}>{t('Cancel')}</Button><Button size="lg" onClick={submit} disabled={amount === '' || Number(amount) < 0 || (mode !== 'set' && !Number(amount))}>{t('Save')}</Button></>}>
+        <p className="text-body-md text-on-surface-variant mb-3">{edit?.row.name}{edit?.row.variant_label ? ` — ${edit.row.variant_label}` : ''} · {t('you have {n} now', { n: edit?.row.on_hand })}</p>
+        <Field label={mode === 'add' ? t('How many to add?') : mode === 'remove' ? t('How many to remove?') : mode === 'set' ? t('How many do you have in the shop right now?') : t('How many are coming from your supplier?')}>
+          <Input type="number" inputMode="numeric" min="0" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ''))} autoFocus className="text-title-lg h-14" />
         </Field>
-        {edit?.mode === 'adjust' && <Field label="Reason" className="mt-3"><Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. New batch from supplier, damaged units" /></Field>}
+        {['add', 'remove'].includes(mode) && (
+          <Field label={t('Reason (optional)')} className="mt-3">
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder={mode === 'add' ? t('e.g. New stock from supplier') : t('e.g. Damaged pieces')} />
+          </Field>
+        )}
       </Modal>
 
-      <Modal open={!!log} onClose={() => setLog(null)} title={`Stock history — ${log?.row.name || ''}`} wide>
-        {log?.items.length === 0 ? <Empty title="No changes yet" /> : (
-          <table className="w-full text-label-md">
-            <thead className="text-left text-on-surface-variant"><tr><th className="py-1">When</th><th>Change</th><th>Reserved</th><th>Reason</th></tr></thead>
-            <tbody>
-              {log?.items.map((t) => (
-                <tr key={t.id} className="border-t border-outline-variant/60">
-                  <td className="py-1.5">{dateTime(t.created_at)}</td>
-                  <td className={t.stock_change < 0 ? 'text-error' : t.stock_change > 0 ? 'text-emerald-700' : ''}>{t.stock_change > 0 ? '+' : ''}{t.stock_change}</td>
-                  <td>{t.reserved_change > 0 ? '+' : ''}{t.reserved_change}</td>
-                  <td>{titleCase(t.reason)}{t.order_id ? ` (order #${t.order_id})` : ''}{t.note ? ` — ${t.note}` : ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Modal open={!!log} onClose={() => setLog(null)} title={`${t('Stock history')} — ${log?.row.name || ''}`} wide>
+        {log?.items.length === 0 ? <Empty title={t('No changes yet')} /> : (
+          <ul className="divide-y divide-outline-variant/60">
+            {log?.items.map((x) => (
+              <li key={x.id} className="py-2.5 flex justify-between gap-3 text-body-md">
+                <span>
+                  <span className="block text-on-surface">{titleCase(x.reason)}{x.order_id ? ` (${t('order')} #${x.order_id})` : ''}{x.note ? ` — ${x.note}` : ''}</span>
+                  <span className="block text-label-sm text-on-surface-variant">{dateTime(x.created_at)}</span>
+                </span>
+                <span className={`font-semibold ${x.stock_change < 0 ? 'text-error' : x.stock_change > 0 ? 'text-emerald-700' : 'text-on-surface-variant'}`}>
+                  {x.stock_change > 0 ? '+' : ''}{x.stock_change || (x.reserved_change ? `${x.reserved_change > 0 ? '+' : ''}${x.reserved_change} ${t('on hold')}` : 0)}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </Modal>
     </div>

@@ -10,6 +10,7 @@ import ChatBubble from '../../../components/chat/ChatBubble';
 import VoiceInputButton from '../../../components/chat/VoiceInputButton';
 import { Icon } from '../../../components/ui';
 import { timeAgo } from '../../../utils/format';
+import { t } from '../../../i18n';
 
 function mapMsg(m) {
   return {
@@ -83,7 +84,7 @@ export default function BuyerInbox({ onToast, openConversationId }) {
       await loadThread(selectedId);
       loadConversations();
     } catch (err) {
-      onToast?.(err.message || 'Failed to send', 'error');
+      onToast?.(err.message, 'error');
     }
   };
 
@@ -105,8 +106,8 @@ export default function BuyerInbox({ onToast, openConversationId }) {
     <div className="flex flex-col lg:flex-row bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm" style={{ height: 'calc(100vh - 170px)', minHeight: 480 }}>
       <div className={`${selectedId ? 'hidden lg:flex' : 'flex'} flex-col w-full lg:w-80 border-r border-outline-variant`}>
         <div className="px-4 py-3 border-b border-outline-variant">
-          <h2 className="text-title-lg text-on-surface font-semibold">Messages</h2>
-          <p className="text-label-sm text-on-surface-variant">Chat in your language — sellers read it in theirs.</p>
+          <h2 className="text-title-lg text-on-surface font-semibold">{t('Chats')}</h2>
+          <p className="text-label-md text-on-surface-variant">{t('Write in your language — sellers read it in theirs.')}</p>
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 && (
@@ -120,7 +121,7 @@ export default function BuyerInbox({ onToast, openConversationId }) {
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-label-md text-on-surface font-semibold truncate">{c.customerName || 'Seller'}</span>
-                <span className="block text-label-sm text-on-surface-variant truncate">{c.lastMessage || 'No messages yet'}</span>
+                <span className="block text-label-sm text-on-surface-variant truncate">{c.lastMessage || t('No messages yet')}</span>
               </span>
               <span className="flex flex-col items-end gap-1 flex-shrink-0">
                 <span className="text-label-sm text-on-surface-variant">{timeAgo(c.lastMessageTime)}</span>
@@ -166,7 +167,7 @@ export default function BuyerInbox({ onToast, openConversationId }) {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant p-8">
             <Icon name="forum" size={56} className="opacity-30" />
-            <p className="text-title-lg font-semibold mt-3">Pick a conversation</p>
+            <p className="text-title-lg font-semibold mt-3">{t('Choose a chat')}</p>
           </div>
         )}
       </div>

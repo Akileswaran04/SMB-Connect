@@ -34,10 +34,18 @@ class AuthService:
         self.db = db
 
     async def register(self, data: RegisterRequest) -> dict:
-        if (await self.db.execute(select(User).where(User.email == data.email))).scalar_one_or_none():
-            raise ConflictException("An account with this email already exists")
+        if not data.email and not data.phone:
+            raise ValidationException("Enter your mobile number")
+        # Mobile first: most shop owners sign up with a number, so that's the clash they understand.
         if data.phone and (await self.db.execute(select(User).where(User.phone == data.phone))).scalar_one_or_none():
-            raise ConflictException("An account with this mobile number already exists")
+            raise ConflictException("An account with this mobile number already exists — please log in")
+        real_email = data.email
+        if not data.email:
+            # ponytail: placeholder email for mobile-only sign-ups (users.email is NOT NULL);
+            # make the column nullable if email ever becomes truly optional everywhere.
+            data.email = f"m{data.phone.lstrip('+')}@mobile.invalid"
+        if (await self.db.execute(select(User).where(User.email == data.email))).scalar_one_or_none():
+            raise ConflictException("An account with this email already exists — please log in")
         if data.role == "logistics" and not (data.company_name or data.full_name):
             raise ValidationException("Company name is required for logistics partners")
 
@@ -62,7 +70,7 @@ class AuthService:
                 license_number=data.license_number,
                 owner_name=data.owner_name or data.full_name,
                 phone=data.phone,
-                email=data.email,
+                email=real_email,
                 city=data.city,
                 verification_status="draft",
             ))
@@ -108,6 +116,8 @@ class AuthService:
             raise ForbiddenException("This account is suspended. Contact support.")
 
     async def demo_login(self, data: DemoLoginRequest) -> dict:
+        if not settings.DEMO_LOGIN_ENABLED:
+            raise ForbiddenException("Demo accounts are turned off")
         email = DEMO_ACCOUNT_EMAILS.get(data.demo)
         if not email:
             raise ValidationException("Unknown demo account")

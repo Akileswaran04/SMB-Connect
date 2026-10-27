@@ -5,6 +5,7 @@
  */
 import { useState } from 'react';
 import { Icon } from '../ui';
+import { t } from '../../i18n';
 
 export default function ChatBubble({ message: m, mine, onSpeak }) {
   const translated = !!m.translatedText && !mine;
@@ -20,7 +21,7 @@ export default function ChatBubble({ message: m, mine, onSpeak }) {
         }`}>
           {m.messageType === 'voice' && (
             <span className={`flex items-center gap-1 text-label-sm mb-0.5 ${mine ? 'text-on-primary/80' : 'text-on-surface-variant'}`}>
-              <Icon name="mic" size={14} /> Voice message
+              <Icon name="mic" size={14} /> {t('Voice message')}
             </span>
           )}
           {text}
@@ -30,14 +31,14 @@ export default function ChatBubble({ message: m, mine, onSpeak }) {
             {m.timestamp ? new Date(m.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
           </span>
           {onSpeak && (
-            <button onClick={() => onSpeak(text, speakLang)} className="text-primary" aria-label="Play message aloud" title="Play aloud">
-              <Icon name="volume_up" size={14} />
+            <button onClick={() => onSpeak(text, speakLang)} className="text-primary w-8 h-8 -my-1 flex items-center justify-center" aria-label={t('Play aloud')} title={t('Play aloud')}>
+              <Icon name="volume_up" size={18} />
             </button>
           )}
           {translated && (
             <button onClick={() => setShowOriginal((v) => !v)} className="inline-flex items-center gap-0.5 text-label-sm text-primary">
               <Icon name="translate" size={12} />
-              {showOriginal ? 'Show translation' : 'Show original'}
+              {showOriginal ? t('Show in my language') : t('Show original')}
             </button>
           )}
         </div>

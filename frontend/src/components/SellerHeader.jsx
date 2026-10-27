@@ -1,6 +1,8 @@
 
 import { useRef } from 'react';
 import { updateSeller } from '../services/storage';
+import { compressImage } from '../utils/image';
+import { t } from '../i18n';
 
 export default function SellerHeader({ seller, onSellerUpdate, onLogout, onMenuToggle, extra }) {
   const fileInputRef = useRef(null);
@@ -9,17 +11,13 @@ export default function SellerHeader({ seller, onSellerUpdate, onLogout, onMenuT
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const dataUrl = ev.target.result;
-      try {
-        await updateSeller(seller.id, { avatarImage: dataUrl });
-        onSellerUpdate({ ...seller, avatarImage: dataUrl });
-      } catch (err) {
-        console.error('Failed to update avatar:', err);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const dataUrl = await compressImage(file, { maxSide: 300 });
+      await updateSeller(seller.id, { avatarImage: dataUrl });
+      onSellerUpdate({ ...seller, avatarImage: dataUrl });
+    } catch (err) {
+      window.alert(err.message || t('Could not change the shop photo. Please try again.'));
+    }
   };
 
   return (
@@ -29,7 +27,7 @@ export default function SellerHeader({ seller, onSellerUpdate, onLogout, onMenuT
           <button
             onClick={() => fileInputRef.current?.click()}
             className="relative flex-shrink-0 w-10 h-10 rounded-full overflow-hidden border border-outline-variant focus:outline-none hover:opacity-90 transition-opacity active:scale-95 duration-200"
-            title="Change store photo"
+            title={t('Change shop photo')}
           >
             {seller.avatarImage ? (
               <img src={seller.avatarImage} alt="Store" className="w-full h-full object-cover" />
@@ -43,7 +41,7 @@ export default function SellerHeader({ seller, onSellerUpdate, onLogout, onMenuT
 
           <div className="min-w-0">
             <h1 className="text-headline-md font-bold text-on-surface truncate max-w-[140px] sm:max-w-none">
-              {seller.business_name || seller.storeName || 'My Store'}
+              {seller.business_name || seller.storeName || t('My shop')}
             </h1>
             {seller.business_type && (
               <span className="text-label-sm text-on-surface-variant truncate block">{seller.business_type}</span>
@@ -55,7 +53,7 @@ export default function SellerHeader({ seller, onSellerUpdate, onLogout, onMenuT
           <button
             onClick={onMenuToggle}
             className="hidden md:flex lg:hidden p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors active:scale-95 duration-200"
-            title="Menu"
+            title={t('Menu')} aria-label={t('Menu')}
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
@@ -65,7 +63,7 @@ export default function SellerHeader({ seller, onSellerUpdate, onLogout, onMenuT
         <button
           onClick={onLogout}
           className="p-2 rounded-full text-primary hover:bg-surface-container transition-colors active:scale-95 duration-200 focus:outline-none flex-shrink-0"
-          title="Log out"
+          title={t('Log out')} aria-label={t('Log out')}
         >
           <span className="material-symbols-outlined">logout</span>
         </button>

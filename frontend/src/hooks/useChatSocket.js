@@ -1,7 +1,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const WS_BASE = (import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/chat');
+const WS_BASE = (import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws/chat');
 
 export default function useChatSocket() {
   const [status, setStatus] = useState('idle');

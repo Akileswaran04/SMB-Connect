@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { Icon, Badge } from '../../../components/ui';
 import { inr, deliveryText } from '../../../utils/format';
+import { t } from '../../../i18n';
 
 const TAGS = {
   'Best Fit': { tone: 'primary', icon: 'verified' },
@@ -22,7 +23,7 @@ export default function RecommendationCard({ item, onView, onCompareToggle, comp
         {item.image_url
           ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
           : <Icon name="inventory_2" size={40} className="text-on-surface-variant/40" />}
-        <Badge tone={tag.tone} className="absolute top-3 left-3 shadow-sm"><Icon name={tag.icon} size={14} />{item.tag}</Badge>
+        <Badge tone={tag.tone} className="absolute top-3 left-3 shadow-sm"><Icon name={tag.icon} size={14} />{t(item.tag)}</Badge>
       </div>
       <div className="p-4 flex flex-col gap-1 flex-1">
         <div className="flex items-baseline gap-2">
@@ -39,7 +40,7 @@ export default function RecommendationCard({ item, onView, onCompareToggle, comp
         </p>
 
         <div className="mt-2">
-          <p className="text-label-sm font-semibold text-on-surface">Why this?</p>
+          <p className="text-label-md font-semibold text-on-surface">{t('Why this?')}</p>
           <ul className="mt-1 space-y-1">
             {(more ? [...item.reasons, ...(item.more_reasons || [])] : item.reasons).map((r) => (
               <li key={r} className="flex items-start gap-1.5 text-label-sm text-on-surface-variant">
@@ -49,18 +50,18 @@ export default function RecommendationCard({ item, onView, onCompareToggle, comp
             ))}
           </ul>
           {item.more_reasons?.length > 0 && (
-            <button onClick={() => setMore((m) => !m)} className="text-label-sm text-primary font-medium mt-1">
-              {more ? 'See less' : 'See more'}
+            <button onClick={() => setMore((m) => !m)} className="min-h-10 text-label-md text-primary font-medium">
+              {more ? t('See less') : t('See more')}
             </button>
           )}
         </div>
 
         <div className="flex gap-2 mt-auto pt-3">
-          <button onClick={() => onView(item)} className="flex-1 h-10 rounded-lg bg-primary text-on-primary text-label-md font-semibold">View</button>
+          <button onClick={() => onView(item)} className="flex-1 h-11 rounded-lg bg-primary text-on-primary text-label-md font-semibold">{t('See this')}</button>
           {onCompareToggle && (
             <button onClick={() => onCompareToggle(item)} aria-pressed={compared}
-              className={`h-10 px-3 rounded-lg border text-label-md ${compared ? 'border-primary text-primary bg-primary-container/10' : 'border-outline-variant text-on-surface-variant'}`}
-              title="Add to comparison">
+              aria-label={t('Compare')} className={`h-11 px-3 rounded-lg border text-label-md ${compared ? 'border-primary text-primary bg-primary-container/10' : 'border-outline-variant text-on-surface-variant'}`}
+              title={t('Compare')}>
               <Icon name={compared ? 'check' : 'compare_arrows'} size={18} />
             </button>
           )}
